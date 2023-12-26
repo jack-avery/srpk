@@ -4,7 +4,6 @@ pub type Result<T> = core::result::Result<T, Error>;
 #[non_exhaustive]
 pub enum Error {
     // db
-
     /// Cannot create database (a file already exists)
     NewDBPathTaken,
 
@@ -18,7 +17,6 @@ pub enum Error {
     NewDBFinalizeFailed,
 
     // crypt
-
     /// BCrypt hash failed
     BCryptHash,
 
@@ -35,10 +33,9 @@ pub enum Error {
     UTF8Decode,
 
     // general
-
     /// Missing parameter
     NoParam,
-    
+
     /// Bad password
     BadPassword,
 }

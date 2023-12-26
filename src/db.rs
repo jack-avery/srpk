@@ -1,7 +1,10 @@
 use std::{fs::remove_file, path::Path};
 
-use crate::errors::{Result, Error::{NewDBPathTaken, NewDBPathUnavailable, NewDBTableFailed, NewDBFinalizeFailed}};
 use crate::crypt::aes256_encrypt;
+use crate::errors::{
+    Error::{NewDBFinalizeFailed, NewDBPathTaken, NewDBPathUnavailable, NewDBTableFailed},
+    Result,
+};
 
 const VERIFY_TEXT: &str = "srpk";
 
@@ -20,7 +23,10 @@ pub fn init(path: &str, pass: &str) -> Result<()> {
     }
 
     let verify: &str = &aes256_encrypt(VERIFY_TEXT, pass)?;
-    let verified = connection.execute(format!("INSERT INTO srpk VALUES ('~VERIFY', '{}');", verify));
+    let verified = connection.execute(format!(
+        "INSERT INTO srpk VALUES ('~VERIFY', '{}');",
+        verify
+    ));
     if verified.is_err() {
         return Err(NewDBFinalizeFailed);
     };
@@ -40,22 +46,22 @@ mod tests {
         ensure_clean(|| {
             let pass: &str = "password";
             init(PATH, pass).unwrap();
-        })}
+        })
+    }
 
     fn ensure_clean<T>(test: T)
-        where T: FnOnce() + panic::UnwindSafe
+    where
+        T: FnOnce() + panic::UnwindSafe,
     {
         let path = Path::new(PATH);
 
         if path.exists() {
             remove_file(path).unwrap();
         }
-        let result = panic::catch_unwind(|| {
-            test()
-        });
-        // if path.exists() {
-        //     remove_file(path).unwrap();
-        // }
+        let result = panic::catch_unwind(|| test());
+        if path.exists() {
+            remove_file(path).unwrap();
+        }
 
         assert!(result.is_ok())
     }

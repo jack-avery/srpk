@@ -2,16 +2,16 @@ mod crypt;
 mod db;
 mod errors;
 
-use std::{env, io::Write};
 use rpassword::read_password;
+use std::{env, io::Write};
 
-use crate::errors::{Result, Error::NoParam};
+use crate::errors::{Error::NoParam, Result};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
     let action: &str = match args.get(1) {
         Some(action) => action,
-        None => "help"
+        None => "help",
     };
     let param: Option<&String> = args.get(2);
 
@@ -20,9 +20,9 @@ fn main() {
         _ => {
             help();
             Ok(())
-        },
+        }
     };
-    
+
     if out.is_err() {
         println!("error: {}", out.unwrap_err());
     }
@@ -52,7 +52,8 @@ fn init(param: &Option<&String>) -> Result<()> {
 }
 
 fn help() {
-    println!("srpk v{} 
+    println!(
+        "srpk v{} 
 
 create or target srpk vault:
     init <vault>    create a new vault at directory <vault>
@@ -65,5 +66,7 @@ work with the active vault:
     rm <key>        remove existing password with name <key>
     <key>           get existing password with name <key>
 
-srpk will clear your clipboard 10 seconds after use", env!("CARGO_PKG_VERSION"))
+srpk will clear your clipboard 10 seconds after use",
+        env!("CARGO_PKG_VERSION")
+    )
 }
