@@ -36,9 +36,6 @@ pub enum Error {
     // general
     /// Missing parameter
     NoParam,
-
-    /// Bad password
-    BadPassword,
 }
 
 impl std::error::Error for Error {}
@@ -49,13 +46,12 @@ impl core::fmt::Display for Error {
             Error::DBEncrypt => write!(f, "failed to encrypt database"),
             Error::BCryptHash => write!(f, "password hashing failed"),
             Error::Base64Decode => write!(f, "base64decode failed"),
-            Error::AES256Encrypt => write!(f, "aes256encrypt failed"),
-            Error::AES256Decrypt => write!(f, "aes256decrypt failed"),
+            Error::AES256Encrypt => write!(f, "encrypt failed"),
+            Error::AES256Decrypt => write!(f, "decrypt failed (bad password?)"),
             Error::UTF8Decode => write!(f, "utf-8 decode failed"),
-            Error::PathTaken => write!(f, "something already exists at that path"),
-            Error::FilePerms => write!(f, "missing permissions to modify that path"),
+            Error::PathTaken => write!(f, "path is occupied"),
+            Error::FilePerms => write!(f, "missing permissions"),
             Error::NoParam => write!(f, "missing parameter"),
-            Error::BadPassword => write!(f, "bad password"),
         }
     }
 }
