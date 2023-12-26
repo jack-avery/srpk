@@ -4,17 +4,11 @@ pub type Result<T> = core::result::Result<T, Error>;
 #[non_exhaustive]
 pub enum Error {
     // db
-    /// Cannot create database (a file already exists)
-    NewDBPathTaken,
+    /// Failed to create database
+    DBCreateTable,
 
-    /// Cannot create database (unknown error)
-    NewDBPathUnavailable,
-
-    /// Failed to create database (create table failed)
-    NewDBTableFailed,
-
-    /// Failed to create database (verification failed)
-    NewDBFinalizeFailed,
+    /// Failed to encrypt database
+    DBEncrypt,
 
     // crypt
     /// BCrypt hash failed
@@ -32,6 +26,13 @@ pub enum Error {
     /// UTF-8 decode failed
     UTF8Decode,
 
+    // file i/o
+    /// File path is used
+    PathTaken,
+
+    /// Missing permissions
+    FilePerms,
+
     // general
     /// Missing parameter
     NoParam,
@@ -44,15 +45,15 @@ impl std::error::Error for Error {}
 impl core::fmt::Display for Error {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         match self {
-            Error::NewDBPathTaken => write!(f, "something already exists at that path"),
-            Error::NewDBPathUnavailable => write!(f, "could not access path"),
-            Error::NewDBTableFailed => write!(f, "failed to initialize database"),
-            Error::NewDBFinalizeFailed => write!(f, "failed to finalize database"),
+            Error::DBCreateTable => write!(f, "failed to initialize database"),
+            Error::DBEncrypt => write!(f, "failed to encrypt database"),
             Error::BCryptHash => write!(f, "password hashing failed"),
             Error::Base64Decode => write!(f, "base64decode failed"),
             Error::AES256Encrypt => write!(f, "aes256encrypt failed"),
             Error::AES256Decrypt => write!(f, "aes256decrypt failed"),
             Error::UTF8Decode => write!(f, "utf-8 decode failed"),
+            Error::PathTaken => write!(f, "something already exists at that path"),
+            Error::FilePerms => write!(f, "missing permissions to modify that path"),
             Error::NoParam => write!(f, "missing parameter"),
             Error::BadPassword => write!(f, "bad password"),
         }

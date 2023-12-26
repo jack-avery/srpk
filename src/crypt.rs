@@ -8,12 +8,12 @@ use base64::{engine::general_purpose, Engine as _};
 use sha2::{Digest, Sha256};
 
 use crate::errors::{
-    Error::{AES256Decrypt, AES256Encrypt, BCryptHash, Base64Decode, UTF8Decode},
+    Error::{AES256Decrypt, AES256Encrypt, BCryptHash, Base64Decode},
     Result,
 };
 
 fn generate_nonce() -> [u8; 12] {
-    let mut nonce = [0u8; 12];
+    let mut nonce: [u8; 12] = [0u8; 12];
     OsRng.fill_bytes(&mut nonce);
     nonce
 }
@@ -29,7 +29,8 @@ fn get_aes256gcmsiv(pass: &str) -> Result<Aes256GcmSiv> {
     Ok(Aes256GcmSiv::new(&hash))
 }
 
-pub fn aes256_decrypt(ciphertext: &str, pass: &str) -> Result<String> {
+/// Returns the original bytes.
+pub fn aes256_decrypt(ciphertext: &str, pass: &str) -> Result<Vec<u8>> {
     let Ok(full_u8) = general_purpose::STANDARD_NO_PAD.decode(ciphertext) else {
         return Err(Base64Decode);
     };
@@ -37,22 +38,21 @@ pub fn aes256_decrypt(ciphertext: &str, pass: &str) -> Result<String> {
     let ciphertext_u8: &[u8] = &full_u8[12..];
     let nonce: &Nonce = &Nonce::from(nonce_u8);
     let cipher: Aes256GcmSiv = get_aes256gcmsiv(pass)?;
-    let Ok(plaintext) = cipher.decrypt(nonce, ciphertext_u8.as_ref()) else {
-        return Err(AES256Decrypt);
-    };
-    match String::from_utf8(plaintext) {
-        Ok(d) => Ok(d),
-        Err(_) => Err(UTF8Decode),
+    match cipher.decrypt(nonce, ciphertext_u8.as_ref()) {
+        Ok(v) => Ok(v),
+        Err(_) => Err(AES256Decrypt),
     }
 }
 
-pub fn aes256_encrypt(plaintext: &str, pass: &str) -> Result<String> {
+/// Turn a `Vec<u8>` into its' encrypted form using `pass`, base64 encoded.
+pub fn aes256_encrypt(plaintext: &Vec<u8>, pass: &str) -> Result<String> {
     let nonce_u8: [u8; 12] = generate_nonce();
     aes256_encrypt_with_nonce(plaintext, pass, nonce_u8)
 }
 
+/// Same as `aes256_encrypt`, except without a randomly generated `nonce`.
 pub fn aes256_encrypt_with_nonce(
-    plaintext: &str,
+    plaintext: &Vec<u8>,
     pass: &str,
     nonce_u8: [u8; 12],
 ) -> Result<String> {
@@ -74,25 +74,37 @@ mod tests {
     const EXPECTED: &str = "dW5pcXVlIG5vbmNlh5RhB7PelxTbC6nmlhph0yFPGfjE+7BDRg";
 
     #[test]
-    fn test_encrypt() {
-        let Ok(cyphertext) = &aes256_encrypt(PLAINTEXT, PASS) else {
+    fn test_encrypt_decrypt() {
+        let plaintext_bytes: Vec<u8> = PLAINTEXT.try_into().unwrap();
+        let Ok(cyphertext) = &aes256_encrypt(&plaintext_bytes, PASS) else {
             panic!()
         };
-        let Ok(decryptedtext) = aes256_decrypt(cyphertext, PASS) else {
+        let Ok(decrypted_bytes) = aes256_decrypt(cyphertext, PASS) else {
             panic!()
         };
-        assert_eq!(decryptedtext, PLAINTEXT);
+        assert_eq!(decrypted_bytes, plaintext_bytes);
+    }
+
+    #[test]
+    fn test_decrypt_bad_pass() {
+        let plaintext_bytes: Vec<u8> = PLAINTEXT.try_into().unwrap();
+        let Ok(cyphertext) = &aes256_encrypt(&plaintext_bytes, PASS) else {
+            panic!()
+        };
+        let bad_pass: &str = "asdf";
+        assert!(aes256_decrypt(cyphertext, bad_pass).is_err());
     }
 
     #[test]
     fn test_encrypt_with_nonce() {
-        let Ok(cyphertext) = &aes256_encrypt_with_nonce(PLAINTEXT, PASS, NONCE_U8) else {
+        let plaintext_bytes: Vec<u8> = PLAINTEXT.try_into().unwrap();
+        let Ok(cyphertext) = &aes256_encrypt_with_nonce(&plaintext_bytes, PASS, NONCE_U8) else {
             panic!()
         };
-        let Ok(decryptedtext) = aes256_decrypt(cyphertext, PASS) else {
+        let Ok(decrypted_bytes) = aes256_decrypt(cyphertext, PASS) else {
             panic!()
         };
         assert_eq!(cyphertext, EXPECTED);
-        assert_eq!(decryptedtext, PLAINTEXT);
+        assert_eq!(decrypted_bytes, plaintext_bytes);
     }
 }

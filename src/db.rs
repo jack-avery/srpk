@@ -1,35 +1,39 @@
-use std::{fs::remove_file, path::Path};
+use std::{fs::{read, write, remove_file}, path::Path};
 
 use crate::crypt::aes256_encrypt;
 use crate::errors::{
-    Error::{NewDBFinalizeFailed, NewDBPathTaken, NewDBPathUnavailable, NewDBTableFailed},
+    Error::{PathTaken, FilePerms, DBCreateTable, DBEncrypt},
     Result,
 };
 
-const VERIFY_TEXT: &str = "srpk";
-
+/// Initialize a vault and encrypt it
 pub fn init(path: &str, pass: &str) -> Result<()> {
+    // verify clean slate
     let path: &Path = Path::new(path);
     if path.exists() {
-        return Err(NewDBPathTaken);
-    };
-    let Ok(connection) = sqlite::open(path) else {
-        return Err(NewDBPathUnavailable);
+        return Err(PathTaken);
     };
 
+    // create the initial DB
+    let Ok(connection) = sqlite::open(path) else {
+        return Err(FilePerms);
+    };
     let created = connection.execute("CREATE TABLE srpk (key TEXT, value TEXT);");
     if created.is_err() {
-        return Err(NewDBTableFailed);
+        return Err(DBCreateTable);
     }
+    drop(connection);
+    // file perms should be solid by this point: we can unwrap everything else from here
 
-    let verify: &str = &aes256_encrypt(VERIFY_TEXT, pass)?;
-    let verified = connection.execute(format!(
-        "INSERT INTO srpk VALUES ('~VERIFY', '{}');",
-        verify
-    ));
-    if verified.is_err() {
-        return Err(NewDBFinalizeFailed);
+    // encrypt
+    let db_raw: Vec<u8> = read(path).unwrap();
+    let Ok(db_enc) = aes256_encrypt(&db_raw, pass) else {
+        return Err(DBEncrypt)
     };
+
+    // overwrite
+    remove_file(path).unwrap();
+    write(path, db_enc).unwrap();
 
     Ok(())
 }
@@ -58,7 +62,7 @@ mod tests {
         if path.exists() {
             remove_file(path).unwrap();
         }
-        let result = panic::catch_unwind(|| test());
+        let result = panic::catch_unwind(test);
         if path.exists() {
             remove_file(path).unwrap();
         }
