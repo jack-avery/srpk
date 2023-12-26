@@ -1,8 +1,8 @@
 use std::{fs::{read, write, remove_file}, path::Path};
 
-use crate::crypt::aes256_encrypt;
+use crate::crypt::{aes256_encrypt, aes256_decrypt};
 use crate::errors::{
-    Error::{PathTaken, FilePerms, DBCreateTable, DBEncrypt},
+    Error::{PathTaken, PathEmpty, FilePerms, DBCreateTable, DBSQLConn},
     Result,
 };
 
@@ -27,9 +27,7 @@ pub fn init(path: &str, pass: &str) -> Result<()> {
 
     // encrypt
     let db_raw: Vec<u8> = read(path).unwrap();
-    let Ok(db_enc) = aes256_encrypt(&db_raw, pass) else {
-        return Err(DBEncrypt)
-    };
+    let db_enc: Vec<u8> = aes256_encrypt(&db_raw, pass)?;
 
     // overwrite
     remove_file(path).unwrap();
@@ -38,35 +36,53 @@ pub fn init(path: &str, pass: &str) -> Result<()> {
     Ok(())
 }
 
-mod tests {
-    use std::panic;
+fn decrypt(path: &str, pass: &str) -> Result<sqlite::Connection> {
+    // verify vault exists & temp path is available
+    let mut path_temp_str: String = path.to_owned();
+    path_temp_str.push_str(".temp");
 
+    let path: &Path = Path::new(path);
+    if !path.exists() {
+        return Err(PathEmpty);
+    };
+    let path_temp: &Path = Path::new(&path_temp_str);
+    if path_temp.exists() {
+        return Err(PathTaken);
+    };
+
+    // decrypt
+    let Ok(db_enc) = read(path) else {
+        return Err(FilePerms);
+    };
+    let db_raw: Vec<u8> = aes256_decrypt(&db_enc, pass)?;
+
+    // create temp and return a connection
+    if write(path_temp, db_raw).is_err() {
+        return Err(FilePerms);
+    };
+    match sqlite::open(path_temp) {
+        Ok(conn) => Ok(conn),
+        Err(_) => Err(DBSQLConn)
+    }
+}
+
+mod tests {
     use super::*;
 
-    const PATH: &str = "./test.db";
+    const PASS: &str = "password";
 
     #[test]
     fn test_create() {
-        ensure_clean(|| {
-            let pass: &str = "password";
-            init(PATH, pass).unwrap();
-        })
+        std::fs::create_dir("db_test_create").unwrap();
+        init("db_test_create/test.db", PASS).unwrap();
+        std::fs::remove_dir_all("db_test_create").unwrap();
     }
 
-    fn ensure_clean<T>(test: T)
-    where
-        T: FnOnce() + panic::UnwindSafe,
-    {
-        let path = Path::new(PATH);
-
-        if path.exists() {
-            remove_file(path).unwrap();
-        }
-        let result = panic::catch_unwind(test);
-        if path.exists() {
-            remove_file(path).unwrap();
-        }
-
-        assert!(result.is_ok())
+    #[test]
+    fn test_decrypt() {
+        std::fs::create_dir("db_test_decrypt").unwrap();
+        init("./db_test_decrypt/test.db", PASS).unwrap();
+        decrypt("./db_test_decrypt/test.db", PASS).unwrap();
+        std::fs::remove_dir_all("db_test_decrypt").unwrap();
     }
 }
