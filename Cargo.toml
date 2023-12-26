@@ -3,9 +3,9 @@ name = "srpk"
 version = "0.0.2"
 authors = ["Jack Avery <jack.avery.business@gmail.com>"]
 edition = "2021"
-description = "CLI password manager using RSA public/private key encryption"
+description = "CLI password manager"
 repository = "https://github.com/jack-avery/srpk"
-keywords = ["rsa", "security", "password", "manager"]
+keywords = ["aes", "aes256", "security", "password", "manager"]
 readme = "README.md"
 license = "MIT"
 
