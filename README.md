@@ -9,7 +9,7 @@ srpk is a **CLI password management tool**.
 That said, code reviews are welcomed, and a list of issues I'm aware of is below:
 
 - Amount of keys in vault is visible
-- Encryption algorithm is fast (enables brute-force attacks), and not configurable
+- Encryption algorithm is not configurable
 - No padding is used in encrypted values
 
 ## Usage

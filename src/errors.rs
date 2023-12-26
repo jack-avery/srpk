@@ -19,6 +19,9 @@ pub enum Error {
 
     // crypt
 
+    /// BCrypt hash failed
+    BCryptHash,
+
     /// Base64 decode failed
     Base64Decode,
 
@@ -48,6 +51,7 @@ impl core::fmt::Display for Error {
             Error::NewDBPathUnavailable => write!(f, "could not access path"),
             Error::NewDBTableFailed => write!(f, "failed to initialize database"),
             Error::NewDBFinalizeFailed => write!(f, "failed to finalize database"),
+            Error::BCryptHash => write!(f, "password hashing failed"),
             Error::Base64Decode => write!(f, "base64decode failed"),
             Error::AES256Encrypt => write!(f, "aes256encrypt failed"),
             Error::AES256Decrypt => write!(f, "aes256decrypt failed"),
