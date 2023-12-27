@@ -25,8 +25,9 @@ fn main() {
         "init" => db_init(&param),
         "use" => db_use(&param),
         "which" => db_which(),
-        "mk" => mk(&param),
-        "rm" => rm(&param),
+        "mk" => key_mk(&param),
+        "rm" => key_rm(&param),
+        "ls" => key_ls(),
         _ => all(action),
     };
 
@@ -68,7 +69,7 @@ fn finish(conn: Connection, path: &str, pass: &str, changed: bool) -> Result<()>
 fn all(param: &str) -> Result<()> {
     let vault: Option<PathBuf> = cfg::get_active_vault()?;
     match vault {
-        Some(_) => get(param),
+        Some(_) => key_get(param),
         None => {
             help();
             Ok(())
@@ -110,11 +111,12 @@ fn db_which() -> Result<()> {
     }
 }
 
-fn mk(param: &Option<&String>) -> Result<()> {
+fn key_mk(param: &Option<&String>) -> Result<()> {
     param_check(param)?;
     let key: &str = param.unwrap();
-    let pass: String = get_password("password for active vault");
+    
     let vault: String = vault_check()?;
+    let pass: String = get_password("password for active vault");
     let conn: Connection = get_vault(&vault, &pass)?;
 
     let new_pass: String = get_password("new password to add");
@@ -125,11 +127,12 @@ fn mk(param: &Option<&String>) -> Result<()> {
     Ok(())
 }
 
-fn rm(param: &Option<&String>) -> Result<()> {
+fn key_rm(param: &Option<&String>) -> Result<()> {
     param_check(param)?;
     let key: &str = param.unwrap();
-    let pass: String = get_password("password for active vault");
+
     let vault: String = vault_check()?;
+    let pass: String = get_password("password for active vault");
     let conn: Connection = get_vault(&vault, &pass)?;
 
     db::password_del(&conn, key)?;
@@ -139,9 +142,9 @@ fn rm(param: &Option<&String>) -> Result<()> {
     Ok(())
 }
 
-fn get(key: &str) -> Result<()> {
-    let pass: String = get_password("password for active vault");
+fn key_get(key: &str) -> Result<()> {
     let vault: String = vault_check()?;
+    let pass: String = get_password("password for active vault");
     let conn: Connection = get_vault(&vault, &pass)?;
 
     let found: Option<String> = db::password_get(&conn, key)?;
@@ -153,6 +156,23 @@ fn get(key: &str) -> Result<()> {
     }
     
     println!("{}", found.unwrap());
+    Ok(())
+}
+
+fn key_ls() -> Result<()> {
+    let vault: String = vault_check()?;
+    let pass: String = get_password("password for active vault");
+    let conn: Connection = get_vault(&vault, &pass)?;
+
+    let keys: Vec<String> = db::password_ls(&conn)?;
+    finish(conn, &vault, &pass, false)?;
+
+    if keys.is_empty() {
+        println!("vault is empty");
+    } else {
+        println!("keys in vault: {}", keys.join(", "))
+    }
+
     Ok(())
 }
 

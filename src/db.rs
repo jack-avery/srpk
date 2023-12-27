@@ -10,6 +10,7 @@ use crate::errors::{
 const PASSWORD_NEW_SQL: &str = "INSERT INTO srpk VALUES (:key, :pass);";
 const PASSWORD_GET_SQL: &str = "SELECT value FROM srpk WHERE key = ?;";
 const PASSWORD_DEL_SQL: &str = "DELETE FROM srpk WHERE key = ?";
+const PASSWORD_LS_SQL: &str = "SELECT key FROM srpk;";
 
 /// Initialize a vault and encrypt it
 pub fn init(path: &str, pass: &str) -> Result<()> {
@@ -140,6 +141,17 @@ pub fn password_del(conn: &Connection, key: &str) -> Result<()> {
     };
     while let Ok(State::Row) = statement.next() {};
     Ok(())
+}
+
+pub fn password_ls(conn: &Connection) -> Result<Vec<String>> {
+    let Ok(mut statement) = conn.prepare(PASSWORD_LS_SQL) else {
+        return Err(DBCreateTable);
+    };
+    let mut keys: Vec<String> = Vec::new();
+    while let Ok(State::Row) = statement.next() {
+        keys.push(statement.read::<String, _>("key").unwrap());
+    }
+    Ok(keys)
 }
 
 mod tests {
