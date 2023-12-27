@@ -22,6 +22,7 @@ create or target srpk vault:
 
 work with the active vault:
     ls              see keys in vault
+    rekey           change master password for active vault
     mk <key>        create new password with name <key>
     rm <key>        remove existing password with name <key>
     <key>           get existing password with name <key>

@@ -35,6 +35,7 @@ fn main() {
         "init" => db_init(&param),
         "use" => db_use(&param),
         "which" => db_which(),
+        "rekey" => db_rekey(),
         "mk" => key_mk(&param),
         "rm" => key_rm(&param),
         "ls" => key_ls(),
@@ -50,6 +51,17 @@ fn get_password(prompt: &str) -> String {
     print!("{}: ", prompt);
     std::io::stdout().flush().unwrap();
     read_password().unwrap()
+}
+
+fn get_password_confirm(prompt: &str) -> String {
+    loop {
+        let pass = get_password(prompt);
+        let pass_confirm = get_password("retype password");
+        if pass == pass_confirm {
+            return pass;
+        }
+        println!("passwords do not match")
+    }
 }
 
 fn param_check(param: &Option<&String>) -> Result<()> {
@@ -95,7 +107,7 @@ fn db_init(param: &Option<&String>) -> Result<()> {
     if !path.ends_with(".db") {
         path.push_str(".db");
     }
-    let pass: String = get_password("password for the new vault");
+    let pass: String = get_password_confirm("password for the new vault");
     db::init(&path, &pass)?;
     println!("successfully created new vault at {}", path);
 
@@ -126,6 +138,18 @@ fn db_which() -> Result<()> {
             Ok(())
         }
     }
+}
+
+fn db_rekey() -> Result<()> {
+    let vault: String = vault_check()?;
+    let pass: String = get_password("current password");
+    let conn: Connection = get_vault(&vault, &pass)?;
+
+    let new_pass: String = get_password_confirm("new vault password");
+    db::finish(conn, &vault, &new_pass, true)?;
+    
+    println!("master password changed");
+    Ok(())
 }
 
 fn key_mk(param: &Option<&String>) -> Result<()> {
@@ -204,6 +228,7 @@ create or target srpk vault:
 
 work with the active vault:
     ls              see keys in vault
+    rekey           change master password for active vault
     mk <key>        create new password with name <key>
     rm <key>        remove existing password with name <key>
     <key>           get existing password with name <key>
