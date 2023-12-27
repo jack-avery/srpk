@@ -50,7 +50,7 @@ $ srpk my_password
 - [x] key mk
 - [x] key get
 - [x] key rm
-- [ ] key ls
+- [x] key ls
 - [ ] use clipboard
 - [ ] clear clipboard
 
