@@ -1,4 +1,5 @@
 mod cfg;
+mod clip;
 mod crypt;
 mod db;
 mod errors;
@@ -9,6 +10,8 @@ use std::{
     env,
     io::Write,
     path::{Path, PathBuf},
+    thread::sleep,
+    time::Duration,
 };
 
 use crate::errors::{
@@ -61,6 +64,14 @@ fn vault_check() -> Result<String> {
         Some(p) => Ok(p.to_str().unwrap().to_owned()),
         None => Err(NoVault),
     }
+}
+
+fn to_clipboard(pass: &str) -> Result<()> {
+    clip::set_clipboard(pass)?;
+    println!("pass has been put into clipboard, and will be cleared in 10s");
+    let wait_duration: Duration = Duration::from_secs(10);
+    sleep(wait_duration);
+    clip::set_clipboard("")
 }
 
 fn get_vault(path: &str, pass: &str) -> Result<Connection> {
@@ -156,13 +167,13 @@ fn key_get(key: &str) -> Result<()> {
     let found: Option<String> = db::password_get(&conn, key)?;
     db::finish(conn, &vault, &pass, false)?;
 
-    if found.is_none() {
-        println!("key {} not found", key);
-        return Ok(());
+    match found {
+        Some(p) => to_clipboard(&p),
+        None => {
+            println!("key {} not found", key);
+            Ok(())
+        }
     }
-
-    println!("{}", found.unwrap());
-    Ok(())
 }
 
 fn key_ls() -> Result<()> {

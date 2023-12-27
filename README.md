@@ -51,8 +51,7 @@ $ srpk my_password
 - [x] key get
 - [x] key rm
 - [x] key ls
-- [ ] use clipboard
-- [ ] clear clipboard
+- [x] use clipboard
 
-- [ ] improve enc and make this actually usable
 - [ ] improve error handling and message verbosity
+- [ ] improve enc and make this actually usable
