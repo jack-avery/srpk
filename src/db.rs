@@ -3,7 +3,7 @@ use sqlite::{Connection, Value, State};
 
 use crate::crypt::{aes256_encrypt, aes256_decrypt};
 use crate::errors::{
-    Error::{PathTaken, PathEmpty, FilePerms, DBCreateTable, DBSQLConn, Duplicate, NonExist},
+    Error::{PathTaken, PathEmpty, FilePerms, DBCreateTable, DBSQLConn, KeyDuplicate, KeyNonExist},
     Result,
 };
 
@@ -96,7 +96,7 @@ pub fn finish(path: &str, pass: &str, changed: bool) -> Result<()> {
 /// Create a new password in a vault.
 pub fn password_new(conn: &Connection, key: &str, pass: &str) -> Result<()> {
     if password_get(conn, key)?.is_some() {
-        return Err(Duplicate);
+        return Err(KeyDuplicate);
     };
 
     let Ok(mut statement) = conn.prepare(PASSWORD_NEW_SQL) else {
@@ -129,7 +129,7 @@ pub fn password_get(conn: &Connection, key: &str) -> Result<Option<String>> {
 /// Delete a password from a vault.
 pub fn password_del(conn: &Connection, key: &str) -> Result<()> {
     if password_get(conn, key)?.is_none() {
-        return Err(NonExist);
+        return Err(KeyNonExist);
     };
 
     let Ok(mut statement) = conn.prepare(PASSWORD_DEL_SQL) else {

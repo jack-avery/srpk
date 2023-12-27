@@ -30,15 +30,24 @@ pub enum Error {
     /// Missing permissions
     FilePerms,
 
+    /// UTF8Decode failed
+    UTF8Decode,
+
     // general
     /// Missing parameter
     NoParam,
 
+    /// No active vault
+    NoVault,
+
     /// Duplicate key
-    Duplicate,
+    KeyDuplicate,
 
     /// Key does not exist
-    NonExist,
+    KeyNonExist,
+
+    /// No clue what went wrong
+    Unknown
 }
 
 impl std::error::Error for Error {}
@@ -53,9 +62,12 @@ impl core::fmt::Display for Error {
             Error::PathTaken => write!(f, "path is occupied"),
             Error::PathEmpty => write!(f, "file not found"),
             Error::FilePerms => write!(f, "missing permissions"),
+            Error::UTF8Decode => write!(f, "failed to decode utf-8"),
             Error::NoParam => write!(f, "missing parameter"),
-            Error::Duplicate => write!(f, "key with that name exists"),
-            Error::NonExist => write!(f, "no key with that name exists"),
+            Error::NoVault => write!(f, "no active vault (try `srpk init`?)"),
+            Error::KeyDuplicate => write!(f, "key with that name exists"),
+            Error::KeyNonExist => write!(f, "no key with that name exists"),
+            Error::Unknown => write!(f, "unknown error"),
         }
     }
 }

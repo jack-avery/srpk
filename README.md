@@ -46,7 +46,7 @@ $ srpk my_password
 
 - [x] encryption
 - [x] vault init
-- [ ] vault use & which
+- [x] vault use & which
 - [x] key mk
 - [x] key get
 - [x] key rm

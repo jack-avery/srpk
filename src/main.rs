@@ -1,12 +1,13 @@
+mod cfg;
 mod crypt;
 mod db;
 mod errors;
 
 use rpassword::read_password;
 use sqlite::Connection;
-use std::{env, io::Write};
+use std::{path::{Path, PathBuf}, env, io::Write};
 
-use crate::errors::{Error::NoParam, Result};
+use crate::errors::{Error::{NoParam, NoVault}, Result};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -21,10 +22,12 @@ fn main() {
             help();
             Ok(())
         },
-        "init" => init(&param),
+        "init" => db_init(&param),
+        "use" => db_use(&param),
+        "which" => db_which(),
         "mk" => mk(&param),
         "rm" => rm(&param),
-        _ => get(action)
+        _ => all(action),
     };
 
     if out.is_err() {
@@ -45,6 +48,13 @@ fn param_check(param: &Option<&String>) -> Result<()> {
     Ok(())
 }
 
+fn vault_check() -> Result<String> {
+    match cfg::get_active_vault()? {
+        Some(p) => Ok(p.to_str().unwrap().to_owned()),
+        None => Err(NoVault),
+    }
+}
+
 fn get_vault(path: &str, pass: &str) -> Result<Connection> {
     db::decrypt(path, pass)
 }
@@ -55,7 +65,18 @@ fn finish(conn: Connection, path: &str, pass: &str, changed: bool) -> Result<()>
     Ok(())
 }
 
-fn init(param: &Option<&String>) -> Result<()> {
+fn all(param: &str) -> Result<()> {
+    let vault: Option<PathBuf> = cfg::get_active_vault()?;
+    match vault {
+        Some(_) => get(param),
+        None => {
+            help();
+            Ok(())
+        }
+    }
+}
+
+fn db_init(param: &Option<&String>) -> Result<()> {
     param_check(param)?;
     let mut path: String = param.unwrap().to_owned();
     if !path.ends_with(".db") {
@@ -67,16 +88,38 @@ fn init(param: &Option<&String>) -> Result<()> {
     Ok(())
 }
 
+fn db_use(param: &Option<&String>) -> Result<()> {
+    param_check(param)?;
+    let vault: &Path = Path::new(param.unwrap());
+    cfg::set_active_vault(vault)?;
+    println!("active vault is now {}", vault.to_str().unwrap());
+    Ok(())
+}
+
+fn db_which() -> Result<()> {
+    let vault: Option<PathBuf> = cfg::get_active_vault()?;
+    match vault {
+        Some(p) => {
+            println!("{}", p.to_str().unwrap());
+            Ok(())
+        },
+        None => {
+            println!("no active vault");
+            Ok(())
+        }
+    }
+}
+
 fn mk(param: &Option<&String>) -> Result<()> {
     param_check(param)?;
     let key: &str = param.unwrap();
     let pass: String = get_password("password for active vault");
-    let path: &str = "test.db"; // TODO: TEMP
-    let conn: Connection = get_vault(path, &pass)?;
+    let vault: String = vault_check()?;
+    let conn: Connection = get_vault(&vault, &pass)?;
 
     let new_pass: String = get_password("new password to add");
     db::password_new(&conn, key, &new_pass)?;
-    finish(conn, path, &pass, true)?;
+    finish(conn, &vault, &pass, true)?;
 
     println!("successfully added new key {}", key);
     Ok(())
@@ -86,11 +129,11 @@ fn rm(param: &Option<&String>) -> Result<()> {
     param_check(param)?;
     let key: &str = param.unwrap();
     let pass: String = get_password("password for active vault");
-    let path: &str = "test.db"; // TODO: TEMP
-    let conn: Connection = get_vault(path, &pass)?;
+    let vault: String = vault_check()?;
+    let conn: Connection = get_vault(&vault, &pass)?;
 
     db::password_del(&conn, key)?;
-    finish(conn, path, &pass, true)?;
+    finish(conn, &vault, &pass, true)?;
 
     println!("successfully removed key {}", key);
     Ok(())
@@ -98,11 +141,11 @@ fn rm(param: &Option<&String>) -> Result<()> {
 
 fn get(key: &str) -> Result<()> {
     let pass: String = get_password("password for active vault");
-    let path: &str = "test.db"; // TODO: TEMP
-    let conn: Connection = get_vault(path, &pass)?;
+    let vault: String = vault_check()?;
+    let conn: Connection = get_vault(&vault, &pass)?;
 
     let found: Option<String> = db::password_get(&conn, key)?;
-    finish(conn, path, &pass, false)?;
+    finish(conn, &vault, &pass, false)?;
 
     if found.is_none() {
         println!("key {} not found", key);
