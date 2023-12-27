@@ -11,30 +11,47 @@ use crate::errors::{
     SrpkError::{AES256Decrypt, AES256Encrypt, BCryptHash},
 };
 
+struct AES256Key {
+    pub cipher: Aes256GcmSiv,
+    pub salt: [u8; 16],
+}
+
 fn generate_nonce() -> [u8; 12] {
     let mut nonce: [u8; 12] = [0u8; 12];
     OsRng.fill_bytes(&mut nonce);
     nonce
 }
 
-fn get_aes256gcmsiv(pass: &str) -> Result<Aes256GcmSiv> {
-    // TODO: find a better way to do this salt?? or does it not matter?
-    let Ok(bcrypt) = bcrypt::hash_with_salt(pass, 12u32, [0u8; 16]) else {
+fn generate_salt() -> [u8; 16] {
+    let mut salt: [u8; 16] = [0u8; 16];
+    OsRng.fill_bytes(&mut salt);
+    salt
+}
+
+fn get_aes256gcmsiv(pass: &str) -> Result<AES256Key> {
+    let salt: [u8; 16] = generate_salt();
+    get_aes256gcmsiv_with_salt(pass, salt)
+}
+
+fn get_aes256gcmsiv_with_salt(pass: &str, salt: [u8; 16]) -> Result<AES256Key> {
+    let Ok(bcrypt) = bcrypt::hash_with_salt(pass, 13u32, salt) else {
         return Err(BCryptHash);
     };
     let mut hasher = Sha256::new();
     hasher.update(bcrypt.to_string());
     let hash: GenericArray<u8, U32> = hasher.finalize();
-    Ok(Aes256GcmSiv::new(&hash))
+    let cipher: Aes256GcmSiv = Aes256GcmSiv::new(&hash);
+    Ok(AES256Key{ cipher, salt })
 }
 
 /// Returns the original bytes.
 pub fn aes256_decrypt(bytes: &[u8], pass: &str) -> Result<Vec<u8>> {
-    let nonce_u8: [u8; 12] = bytes[..12].try_into().unwrap(); // TODO: refactor this unwrap
-    let ciphertext_u8: &[u8] = &bytes[12..];
+    let salt_u8: [u8; 16] = bytes[..16].try_into().unwrap();
+    let nonce_u8: [u8; 12] = bytes[16..28].try_into().unwrap();
+    let ciphertext_u8: &[u8] = &bytes[28..];
     let nonce: &Nonce = &Nonce::from(nonce_u8);
-    let cipher: Aes256GcmSiv = get_aes256gcmsiv(pass)?;
-    match cipher.decrypt(nonce, ciphertext_u8.as_ref()) {
+    let key: AES256Key = get_aes256gcmsiv_with_salt(pass, salt_u8)?;
+    match key.cipher.decrypt(nonce, ciphertext_u8.as_ref()) {
         Ok(v) => Ok(v),
         Err(_) => Err(AES256Decrypt),
     }
@@ -53,11 +70,11 @@ pub fn aes256_encrypt_with_nonce(
     nonce_u8: [u8; 12],
 ) -> Result<Vec<u8>> {
     let nonce: &Nonce = &Nonce::from(nonce_u8);
-    let cipher: Aes256GcmSiv = get_aes256gcmsiv(pass)?;
-    let Ok(ciphertext) = cipher.encrypt(nonce, plaintext.as_ref()) else {
+    let key: AES256Key = get_aes256gcmsiv(pass)?;
+    let Ok(ciphertext) = key.cipher.encrypt(nonce, plaintext.as_ref()) else {
         return Err(AES256Encrypt);
     };
-    Ok([nonce_u8.to_vec(), ciphertext].concat())
+    Ok([key.salt.to_vec(), nonce_u8.to_vec(), ciphertext].concat())
 }
 
 mod tests {
@@ -66,11 +83,6 @@ mod tests {
     const PLAINTEXT: &str = "plaintext";
     const PASS: &str = "password";
     const BAD_PASS: &str = "bad_password";
-    const NONCE_U8: [u8; 12] = *b"unique nonce";
-    const EXPECTED: [u8; 37] = [
-        117, 110, 105, 113, 117, 101, 32, 110, 111, 110, 99, 101, 135, 148, 97, 7, 179, 222, 151,
-        20, 219, 11, 169, 230, 150, 26, 97, 211, 33, 79, 25, 248, 196, 251, 176, 67, 70,
-    ];
 
     #[test]
     fn test_encrypt_decrypt() {
@@ -85,16 +97,5 @@ mod tests {
         let plaintext_bytes: Vec<u8> = PLAINTEXT.try_into().unwrap();
         let encrypted_bytes: Vec<u8> = aes256_encrypt(&plaintext_bytes, PASS).unwrap();
         assert!(aes256_decrypt(&encrypted_bytes, BAD_PASS).is_err());
-    }
-
-    #[test]
-    fn test_encrypt_with_nonce() {
-        let plaintext_bytes: Vec<u8> = PLAINTEXT.try_into().unwrap();
-        let expected_bytes: Vec<u8> = EXPECTED.try_into().unwrap();
-        let encrypted_bytes: Vec<u8> =
-            aes256_encrypt_with_nonce(&plaintext_bytes, PASS, NONCE_U8).unwrap();
-        let decrypted_bytes: Vec<u8> = aes256_decrypt(&encrypted_bytes, PASS).unwrap();
-        assert_eq!(encrypted_bytes, expected_bytes);
-        assert_eq!(decrypted_bytes, plaintext_bytes);
     }
 }
