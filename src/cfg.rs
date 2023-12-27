@@ -31,7 +31,10 @@ pub fn get_active_vault() -> Result<Option<PathBuf>> {
     match String::from_utf8(file_bytes) {
         Ok(p) => {
             let active: PathBuf = PathBuf::from(p);
-            Ok(Some(active))
+            match active.exists() {
+                true => Ok(Some(active)),
+                false => Err(PathEmpty),
+            }
         }
         Err(_) => Err(UTF8Decode),
     }
