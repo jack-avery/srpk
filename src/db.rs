@@ -1,9 +1,12 @@
-use std::{fs::{read, write, remove_file}, path::Path};
-use sqlite::{Connection, Value, State};
+use sqlite::{Connection, State, Value};
+use std::{
+    fs::{read, remove_file, write},
+    path::Path,
+};
 
-use crate::crypt::{aes256_encrypt, aes256_decrypt};
+use crate::crypt::{aes256_decrypt, aes256_encrypt};
 use crate::errors::{
-    Error::{PathTaken, PathEmpty, FilePerms, DBCreateTable, DBSQLConn, KeyDuplicate, KeyNonExist},
+    Error::{DBCreateTable, DBSQLConn, FilePerms, KeyDuplicate, KeyNonExist, PathEmpty, PathTaken},
     Result,
 };
 
@@ -69,7 +72,7 @@ pub fn decrypt(path: &str, pass: &str) -> Result<Connection> {
     };
     match sqlite::open(path_temp) {
         Ok(conn) => Ok(conn),
-        Err(_) => Err(DBSQLConn)
+        Err(_) => Err(DBSQLConn),
     }
 }
 
@@ -103,13 +106,13 @@ pub fn password_new(conn: &Connection, key: &str, pass: &str) -> Result<()> {
     let Ok(mut statement) = conn.prepare(PASSWORD_NEW_SQL) else {
         return Err(DBSQLConn);
     };
-    if statement.bind_iter::<_, (_, Value)>([
-        (":key", key.into()),
-        (":pass", pass.into())
-    ]).is_err() {
+    if statement
+        .bind_iter::<_, (_, Value)>([(":key", key.into()), (":pass", pass.into())])
+        .is_err()
+    {
         return Err(DBSQLConn);
     };
-    while let Ok(State::Row) = statement.next() {};
+    while let Ok(State::Row) = statement.next() {}
     Ok(())
 }
 
@@ -139,7 +142,7 @@ pub fn password_del(conn: &Connection, key: &str) -> Result<()> {
     if statement.bind((1, key)).is_err() {
         return Err(DBSQLConn);
     };
-    while let Ok(State::Row) = statement.next() {};
+    while let Ok(State::Row) = statement.next() {}
     Ok(())
 }
 

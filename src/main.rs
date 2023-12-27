@@ -5,9 +5,16 @@ mod errors;
 
 use rpassword::read_password;
 use sqlite::Connection;
-use std::{path::{Path, PathBuf}, env, io::Write};
+use std::{
+    env,
+    io::Write,
+    path::{Path, PathBuf},
+};
 
-use crate::errors::{Error::{NoParam, NoVault}, Result};
+use crate::errors::{
+    Error::{NoParam, NoVault},
+    Result,
+};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -21,7 +28,7 @@ fn main() {
         "help" => {
             help();
             Ok(())
-        },
+        }
         "init" => db_init(&param),
         "use" => db_use(&param),
         "which" => db_which(),
@@ -108,7 +115,7 @@ fn db_which() -> Result<()> {
         Some(p) => {
             println!("{}", p.to_str().unwrap());
             Ok(())
-        },
+        }
         None => {
             println!("no active vault");
             Ok(())
@@ -119,7 +126,7 @@ fn db_which() -> Result<()> {
 fn key_mk(param: &Option<&String>) -> Result<()> {
     param_check(param)?;
     let key: &str = param.unwrap();
-    
+
     let vault: String = vault_check()?;
     let pass: String = get_password("password for active vault");
     let conn: Connection = get_vault(&vault, &pass)?;
@@ -157,9 +164,9 @@ fn key_get(key: &str) -> Result<()> {
 
     if found.is_none() {
         println!("key {} not found", key);
-        return Ok(())
+        return Ok(());
     }
-    
+
     println!("{}", found.unwrap());
     Ok(())
 }

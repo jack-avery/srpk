@@ -67,9 +67,10 @@ mod tests {
     const PASS: &str = "password";
     const BAD_PASS: &str = "bad_password";
     const NONCE_U8: [u8; 12] = *b"unique nonce";
-    const EXPECTED: [u8; 37] = [117, 110, 105, 113, 117, 101, 32, 110, 111, 110,
-        99, 101, 135, 148, 97, 7, 179, 222, 151, 20, 219, 11, 169, 230, 150, 26,
-        97, 211, 33, 79, 25, 248, 196, 251, 176, 67, 70];
+    const EXPECTED: [u8; 37] = [
+        117, 110, 105, 113, 117, 101, 32, 110, 111, 110, 99, 101, 135, 148, 97, 7, 179, 222, 151,
+        20, 219, 11, 169, 230, 150, 26, 97, 211, 33, 79, 25, 248, 196, 251, 176, 67, 70,
+    ];
 
     #[test]
     fn test_encrypt_decrypt() {
@@ -90,7 +91,8 @@ mod tests {
     fn test_encrypt_with_nonce() {
         let plaintext_bytes: Vec<u8> = PLAINTEXT.try_into().unwrap();
         let expected_bytes: Vec<u8> = EXPECTED.try_into().unwrap();
-        let encrypted_bytes: Vec<u8> = aes256_encrypt_with_nonce(&plaintext_bytes, PASS, NONCE_U8).unwrap();
+        let encrypted_bytes: Vec<u8> =
+            aes256_encrypt_with_nonce(&plaintext_bytes, PASS, NONCE_U8).unwrap();
         let decrypted_bytes: Vec<u8> = aes256_decrypt(&encrypted_bytes, PASS).unwrap();
         assert_eq!(encrypted_bytes, expected_bytes);
         assert_eq!(decrypted_bytes, plaintext_bytes);

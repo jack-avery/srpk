@@ -47,7 +47,7 @@ pub enum Error {
     KeyNonExist,
 
     /// No clue what went wrong
-    Unknown
+    Unknown,
 }
 
 impl std::error::Error for Error {}

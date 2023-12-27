@@ -1,17 +1,22 @@
-use std::{env::current_dir, path::{Path, PathBuf}, fs::{write, read}};
 use dirs::config_dir;
+use std::{
+    env::current_dir,
+    fs::{read, write},
+    path::{Path, PathBuf},
+};
 
-use crate::errors::{Result, Error::{PathEmpty, FilePerms, UTF8Decode, Unknown}};
+use crate::errors::{
+    Error::{FilePerms, PathEmpty, UTF8Decode, Unknown},
+    Result,
+};
 
 fn cfg_path() -> Result<PathBuf> {
     match config_dir() {
         Some(mut buf) => {
             buf.push(".srpkvault");
             Ok(buf)
-        },
-        None => {
-            Err(PathEmpty)
-        },
+        }
+        None => Err(Unknown),
     }
 }
 
@@ -27,10 +32,8 @@ pub fn get_active_vault() -> Result<Option<PathBuf>> {
         Ok(p) => {
             let active: PathBuf = PathBuf::from(p);
             Ok(Some(active))
-        },
-        Err(_) => {
-            Err(UTF8Decode)
         }
+        Err(_) => Err(UTF8Decode),
     }
 }
 
@@ -41,7 +44,7 @@ pub fn set_active_vault(vault: &Path) -> Result<()> {
     let mut new_vault: PathBuf = PathBuf::new();
     if !vault.has_root() {
         let Ok(cwd) = current_dir() else {
-            return Err(Unknown)
+            return Err(Unknown);
         };
         new_vault.push(cwd)
     }
