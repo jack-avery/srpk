@@ -8,7 +8,8 @@ srpk is a **CLI password management tool**.
 **This is a learning project for Rust, and is not intended to be used ever!**<br/>
 That said, code reviews are welcomed, and a list of issues I'm aware of is below:
 
-- Encryption algorithm is not configurable
+- Encryption algorithm is not configurable (uses AES256)
+- Database engine is not configurable (uses SQLite3)
 - No padding is used in encrypted values
 
 ## Usage
@@ -26,6 +27,19 @@ work with the active vault:
     <key>           get existing password with name <key>
 
 srpk will clear your clipboard 10 seconds after use
+```
+
+Sample usage:
+```
+$ srpk init my_vault
+(prompts password and creates vault)
+
+$ srpk mk my_password
+(prompts vault password then for new my_password)
+
+$ srpk my_password
+(prompts vault password then shunts my_password into clipboard;
+    clears your clipboard after 10s)
 ```
 
 ## TODO
