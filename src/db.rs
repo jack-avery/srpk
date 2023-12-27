@@ -12,6 +12,11 @@ use crate::errors::{
     },
 };
 
+const PASSWORD_NEW_SQL: &str = "INSERT INTO srpk VALUES (:key, :pass);";
+const PASSWORD_GET_SQL: &str = "SELECT value FROM srpk WHERE key = ?;";
+const PASSWORD_DEL_SQL: &str = "DELETE FROM srpk WHERE key = ?";
+const PASSWORD_LS_SQL: &str = "SELECT key FROM srpk;";
+
 pub struct Vault {
     conn: Connection,
     pass: String,
@@ -20,12 +25,8 @@ pub struct Vault {
     cost: u8,
 }
 
-const PASSWORD_NEW_SQL: &str = "INSERT INTO srpk VALUES (:key, :pass);";
-const PASSWORD_GET_SQL: &str = "SELECT value FROM srpk WHERE key = ?;";
-const PASSWORD_DEL_SQL: &str = "DELETE FROM srpk WHERE key = ?";
-const PASSWORD_LS_SQL: &str = "SELECT key FROM srpk;";
-
 impl Vault {
+    /// Open a vault at `path` using `pass`.
     pub fn new(path: &str, pass: &str) -> Result<Self> {
         let mut path_str: String = path.to_owned();
         let path: PathBuf = PathBuf::from(&path_str);
@@ -56,6 +57,7 @@ impl Vault {
         Ok(Self{ conn, pass: pass.to_owned(), path, path_temp, cost: db_raw.cost })
     }
 
+    /// Close the vault, applying changes if `changed`.
     pub fn finish(self, changed: bool) -> Result<()> {
         if changed {
             let path: &Path = Path::new(&self.path);
@@ -71,7 +73,7 @@ impl Vault {
         Ok(())
     }
 
-    /// Create a new password in a vault.
+    /// Create new password `key` of content `pass` in the vault.
     pub fn key_new(&self, key: &str, pass: &str) -> Result<()> {
         if self.key_get(key)?.is_some() {
             return Err(KeyDuplicate);
@@ -90,7 +92,7 @@ impl Vault {
         Ok(())
     }
 
-    /// Get a password from a vault. `None` if given key is missing.
+    /// Get password `key` from the vault. `None` if given key is missing.
     pub fn key_get(&self, key: &str) -> Result<Option<String>> {
         let Ok(mut statement) = self.conn.prepare(PASSWORD_GET_SQL) else {
             return Err(DBCreateTable);
@@ -104,7 +106,7 @@ impl Vault {
         Ok(None)
     }
 
-    /// Delete a password from a vault.
+    /// Delete password `key` from the vault.
     pub fn key_del(&self, key: &str) -> Result<()> {
         if self.key_get(key)?.is_none() {
             return Err(KeyNonExist);
@@ -120,6 +122,7 @@ impl Vault {
         Ok(())
     }
 
+    /// Get a `Vec<String>` containing the names of each key in the vault.
     pub fn key_ls(&self) -> Result<Vec<String>> {
         let Ok(mut statement) = self.conn.prepare(PASSWORD_LS_SQL) else {
             return Err(DBCreateTable);
