@@ -1,9 +1,9 @@
 mod cfg;
-mod clip;
 mod crypt;
 mod db;
 mod errors;
 
+use arboard::Clipboard;
 use rpassword::read_password;
 use std::{
     env,
@@ -16,7 +16,7 @@ use std::{
 use crate::{db::Vault,
     errors::{
     Result,
-    SrpkError::{NoParam, NoVault},
+    SrpkError::{NoParam, NoVault, Unknown},
 }};
 
 fn main() {
@@ -46,12 +46,6 @@ fn main() {
     }
 }
 
-fn get_password(prompt: &str) -> String {
-    print!("{}: ", prompt);
-    stdout().flush().unwrap();
-    read_password().unwrap()
-}
-
 fn get_cost() -> u8 {
     let mut cost: String = String::new();
     loop {
@@ -76,6 +70,12 @@ fn get_cost() -> u8 {
     }
 }
 
+fn get_password(prompt: &str) -> String {
+    print!("{}: ", prompt);
+    stdout().flush().unwrap();
+    read_password().unwrap()
+}
+
 fn get_password_confirm(prompt: &str) -> String {
     loop {
         let pass = get_password(prompt);
@@ -85,6 +85,16 @@ fn get_password_confirm(prompt: &str) -> String {
         }
         println!("passwords do not match")
     }
+}
+
+pub fn set_clipboard(text: &str) -> Result<()> {
+    let Ok(mut clipboard) = Clipboard::new() else {
+        return Err(Unknown)
+    };
+    if clipboard.set_text(text).is_err() {
+        return Err(Unknown)
+    }
+    Ok(())
 }
 
 fn param_check(param: &Option<&String>) -> Result<()> {
@@ -102,11 +112,11 @@ fn vault_check() -> Result<String> {
 }
 
 fn to_clipboard(pass: &str) -> Result<()> {
-    clip::set_clipboard(pass)?;
+    set_clipboard(pass)?;
     println!("pass has been put into clipboard, and will be cleared in 10s");
     let wait_duration: Duration = Duration::from_secs(10);
     sleep(wait_duration);
-    clip::set_clipboard("")
+    set_clipboard("")
 }
 
 fn all(param: &str) -> Result<()> {
