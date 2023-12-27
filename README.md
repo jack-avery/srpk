@@ -1,7 +1,7 @@
 # srpk
 > simple rust passkey
 
-srpk is a **CLI password management tool**.
+srpk is a locally-stored CLI **password management** tool that uses your clipboard.
 
 ## ⚠️ Notice
 
@@ -14,7 +14,7 @@ That said, code reviews are welcomed, and a list of issues I'm aware of is below
 
 > \* you can change bcrypt cost
 
-## Usage
+## ✍️ Usage
 
 ```
 create or target srpk vault:
@@ -44,7 +44,7 @@ $ srpk my_password
     clears your clipboard after 10s)
 ```
 
-## TODO
+## 🗒️ To-Do
 
 - [x] encryption
 - [x] vault init
@@ -58,3 +58,8 @@ $ srpk my_password
 
 - [ ] improve error handling and message verbosity
 - [ ] improve enc and make this actually usable
+
+## Bug reports & feature suggestions 🐛
+Has something gone **horribly** wrong? *Or do you just think something's missing?*
+
+Feel free to [create a new issue](https://github.com/jack-avery/srpk/issues), join the [Discord](https://discord.gg/qpyT4zx), or message me directly on Discord about it: `@raspy`.
