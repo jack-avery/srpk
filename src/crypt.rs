@@ -60,15 +60,6 @@ pub fn aes256_decrypt(bytes: &[u8], pass: &str) -> Result<Vec<u8>> {
 /// Turn a `Vec<u8>` into its' encrypted form using `pass`.
 pub fn aes256_encrypt(plaintext: &Vec<u8>, pass: &str) -> Result<Vec<u8>> {
     let nonce_u8: [u8; 12] = generate_nonce();
-    aes256_encrypt_with_nonce(plaintext, pass, nonce_u8)
-}
-
-/// Same as `aes256_encrypt`, except without a randomly generated `nonce`.
-pub fn aes256_encrypt_with_nonce(
-    plaintext: &Vec<u8>,
-    pass: &str,
-    nonce_u8: [u8; 12],
-) -> Result<Vec<u8>> {
     let nonce: &Nonce = &Nonce::from(nonce_u8);
     let key: AES256Key = get_aes256gcmsiv(pass)?;
     let Ok(ciphertext) = key.cipher.encrypt(nonce, plaintext.as_ref()) else {
