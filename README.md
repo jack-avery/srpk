@@ -33,9 +33,12 @@ srpk will clear your clipboard 10 seconds after use
 - [x] encryption
 - [x] vault init
 - [ ] vault use & which
-- [ ] key mk
-- [ ] key get
-- [ ] key rm
+- [x] key mk
+- [x] key get
+- [x] key rm
 - [ ] key ls
+- [ ] use clipboard
 - [ ] clear clipboard
-- [ ] (maybe) improve enc and make this actually usable
+
+- [ ] improve enc and make this actually usable
+- [ ] improve error handling and message verbosity
