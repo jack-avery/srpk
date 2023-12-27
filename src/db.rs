@@ -158,8 +158,8 @@ mod tests {
     use super::*;
 
     const PASS: &str = "password";
-    const D_KEY: &str = "test";
-    const D_PASS: &str = "my_password";
+    const KEY1: &str = "key1";
+    const KEY2: &str = "key2";
 
     #[test]
     fn test_create() {
@@ -174,10 +174,12 @@ mod tests {
         std::fs::create_dir("db_test_password_new").unwrap();
         init("./db_test_password_new/test.db", PASS).unwrap();
         let conn: Connection = decrypt("./db_test_password_new/test.db", PASS).unwrap();
-        password_new(&conn, D_KEY, D_PASS).unwrap();
-        let read: Option<String> = password_get(&conn, D_KEY).unwrap();
+
+        password_new(&conn, KEY1, PASS).unwrap();
+        let read: Option<String> = password_get(&conn, KEY1).unwrap();
         assert!(read.is_some());
-        assert_eq!(read.unwrap(), D_PASS);
+        assert_eq!(read.unwrap(), PASS);
+
         drop(conn);
         std::fs::remove_dir_all("db_test_password_new").unwrap();
     }
@@ -187,9 +189,9 @@ mod tests {
         std::fs::create_dir("db_test_finish_unchanged").unwrap();
         init("./db_test_finish_unchanged/test.db", PASS).unwrap();
         let before: Vec<u8> = std::fs::read("./db_test_finish_unchanged/test.db").unwrap();
-
         let conn: Connection = decrypt("./db_test_finish_unchanged/test.db", PASS).unwrap();
-        password_new(&conn, D_KEY, D_PASS).unwrap();
+
+        password_new(&conn, KEY1, PASS).unwrap();
         finish("./db_test_finish_unchanged/test.db", PASS, false).unwrap();
         drop(conn);
         let after: Vec<u8> = std::fs::read("./db_test_finish_unchanged/test.db").unwrap();
@@ -203,9 +205,9 @@ mod tests {
         std::fs::create_dir("db_test_finish_changed").unwrap();
         init("./db_test_finish_changed/test.db", PASS).unwrap();
         let before: Vec<u8> = std::fs::read("./db_test_finish_changed/test.db").unwrap();
-
         let conn: Connection = decrypt("./db_test_finish_changed/test.db", PASS).unwrap();
-        password_new(&conn, D_KEY, D_PASS).unwrap();
+
+        password_new(&conn, KEY1, PASS).unwrap();
         finish("./db_test_finish_changed/test.db", PASS, true).unwrap();
         drop(conn);
         let after: Vec<u8> = std::fs::read("./db_test_finish_changed/test.db").unwrap();
@@ -219,8 +221,10 @@ mod tests {
         std::fs::create_dir("db_test_password_new_duplicate").unwrap();
         init("./db_test_password_new_duplicate/test.db", PASS).unwrap();
         let conn: Connection = decrypt("./db_test_password_new_duplicate/test.db", PASS).unwrap();
-        password_new(&conn, D_KEY, D_PASS).unwrap();
-        assert!(password_new(&conn, D_KEY, D_PASS).is_err());
+
+        password_new(&conn, KEY1, PASS).unwrap();
+        assert!(password_new(&conn, KEY1, PASS).is_err());
+
         drop(conn);
         std::fs::remove_dir_all("db_test_password_new_duplicate").unwrap();
     }
@@ -230,8 +234,10 @@ mod tests {
         std::fs::create_dir("db_test_password_del").unwrap();
         init("./db_test_password_del/test.db", PASS).unwrap();
         let conn: Connection = decrypt("./db_test_password_del/test.db", PASS).unwrap();
-        password_new(&conn, D_KEY, D_PASS).unwrap();
-        password_del(&conn, D_KEY).unwrap();
+
+        password_new(&conn, KEY1, PASS).unwrap();
+        password_del(&conn, KEY1).unwrap();
+
         drop(conn);
         std::fs::remove_dir_all("db_test_password_del").unwrap();
     }
@@ -241,8 +247,27 @@ mod tests {
         std::fs::create_dir("db_test_password_del_missing").unwrap();
         init("./db_test_password_del_missing/test.db", PASS).unwrap();
         let conn: Connection = decrypt("./db_test_password_del_missing/test.db", PASS).unwrap();
-        assert!(password_del(&conn, D_KEY).is_err());
+
+        assert!(password_del(&conn, KEY1).is_err());
+
         drop(conn);
         std::fs::remove_dir_all("db_test_password_del_missing").unwrap();
+    }
+
+    #[test]
+    fn text_password_ls() {
+        std::fs::create_dir("db_test_password_ls").unwrap();
+        init("./db_test_password_ls/test.db", PASS).unwrap();
+        let conn: Connection = decrypt("./db_test_password_ls/test.db", PASS).unwrap();
+
+        password_new(&conn, KEY1, PASS).unwrap();
+        let ls = password_ls(&conn).unwrap();
+        assert_eq!(ls.len(), 1);
+        password_new(&conn, KEY2, PASS).unwrap();
+        let ls = password_ls(&conn).unwrap();
+        assert_eq!(ls.len(), 2);
+
+        drop(conn);
+        std::fs::remove_dir_all("db_test_password_ls").unwrap();
     }
 }
