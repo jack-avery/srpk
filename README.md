@@ -8,9 +8,11 @@ srpk is a **CLI password management tool**.
 **This is a learning project for Rust, and is not intended to be used ever!**<br/>
 That said, code reviews are welcomed, and a list of issues I'm aware of is below:
 
-- Encryption algorithm is not configurable (uses AES256)
+- Encryption algorithm is not configurable* (uses AES256)
 - Database engine is not configurable (uses SQLite3)
 - No padding is used in encrypted values
+
+> \* you can change bcrypt cost
 
 ## Usage
 
@@ -22,7 +24,6 @@ create or target srpk vault:
 
 work with the active vault:
     ls              see keys in vault
-    rekey           change master password for active vault
     mk <key>        create new password with name <key>
     rm <key>        remove existing password with name <key>
     <key>           get existing password with name <key>
