@@ -3,6 +3,7 @@ mod db;
 mod errors;
 
 use rpassword::read_password;
+use sqlite::Connection;
 use std::{env, io::Write};
 
 use crate::errors::{Error::NoParam, Result};
@@ -16,11 +17,14 @@ fn main() {
     let param: Option<&String> = args.get(2);
 
     let out: Result<()> = match action {
-        "init" => init(&param),
-        _ => {
+        "help" => {
             help();
             Ok(())
-        }
+        },
+        "init" => init(&param),
+        "mk" => mk(&param),
+        "rm" => rm(&param),
+        _ => get(action)
     };
 
     if out.is_err() {
@@ -34,21 +38,79 @@ fn get_password(prompt: &str) -> String {
     read_password().unwrap()
 }
 
-fn init(param: &Option<&String>) -> Result<()> {
+fn param_check(param: &Option<&String>) -> Result<()> {
     if param.is_none() {
         return Err(NoParam);
     }
+    Ok(())
+}
+
+fn get_vault(path: &str, pass: &str) -> Result<Connection> {
+    db::decrypt(path, pass)
+}
+
+fn finish(conn: Connection, path: &str, pass: &str, changed: bool) -> Result<()> {
+    drop(conn);
+    db::finish(path, pass, changed)?;
+    Ok(())
+}
+
+fn init(param: &Option<&String>) -> Result<()> {
+    param_check(param)?;
     let mut path: String = param.unwrap().to_owned();
     if !path.ends_with(".db") {
         path.push_str(".db");
     }
     let pass: String = get_password("password for the new vault");
-    if let Err(status) = db::init(&path, &pass) {
-        Err(status)
-    } else {
-        println!("successfully created new vault at {}", path);
-        Ok(())
+    db::init(&path, &pass)?;
+    println!("successfully created new vault at {}", path);
+    Ok(())
+}
+
+fn mk(param: &Option<&String>) -> Result<()> {
+    param_check(param)?;
+    let key: &str = param.unwrap();
+    let pass: String = get_password("password for active vault");
+    let path: &str = "test.db"; // TODO: TEMP
+    let conn: Connection = get_vault(path, &pass)?;
+
+    let new_pass: String = get_password("new password to add");
+    db::password_new(&conn, key, &new_pass)?;
+    finish(conn, path, &pass, true)?;
+
+    println!("successfully added new key {}", key);
+    Ok(())
+}
+
+fn rm(param: &Option<&String>) -> Result<()> {
+    param_check(param)?;
+    let key: &str = param.unwrap();
+    let pass: String = get_password("password for active vault");
+    let path: &str = "test.db"; // TODO: TEMP
+    let conn: Connection = get_vault(path, &pass)?;
+
+    db::password_del(&conn, key)?;
+    finish(conn, path, &pass, true)?;
+
+    println!("successfully removed key {}", key);
+    Ok(())
+}
+
+fn get(key: &str) -> Result<()> {
+    let pass: String = get_password("password for active vault");
+    let path: &str = "test.db"; // TODO: TEMP
+    let conn: Connection = get_vault(path, &pass)?;
+
+    let found: Option<String> = db::password_get(&conn, key)?;
+    finish(conn, path, &pass, false)?;
+
+    if found.is_none() {
+        println!("key {} not found", key);
+        return Ok(())
     }
+    
+    println!("{}", found.unwrap());
+    Ok(())
 }
 
 fn help() {

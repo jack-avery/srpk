@@ -33,6 +33,12 @@ pub enum Error {
     // general
     /// Missing parameter
     NoParam,
+
+    /// Duplicate key
+    Duplicate,
+
+    /// Key does not exist
+    NonExist,
 }
 
 impl std::error::Error for Error {}
@@ -48,6 +54,8 @@ impl core::fmt::Display for Error {
             Error::PathEmpty => write!(f, "file not found"),
             Error::FilePerms => write!(f, "missing permissions"),
             Error::NoParam => write!(f, "missing parameter"),
+            Error::Duplicate => write!(f, "key with that name exists"),
+            Error::NonExist => write!(f, "no key with that name exists"),
         }
     }
 }

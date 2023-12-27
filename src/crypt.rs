@@ -29,7 +29,7 @@ fn get_aes256gcmsiv(pass: &str) -> Result<Aes256GcmSiv> {
 }
 
 /// Returns the original bytes.
-pub fn aes256_decrypt(bytes: &Vec<u8>, pass: &str) -> Result<Vec<u8>> {
+pub fn aes256_decrypt(bytes: &[u8], pass: &str) -> Result<Vec<u8>> {
     let nonce_u8: [u8; 12] = bytes[..12].try_into().unwrap(); // TODO: refactor this unwrap
     let ciphertext_u8: &[u8] = &bytes[12..];
     let nonce: &Nonce = &Nonce::from(nonce_u8);
