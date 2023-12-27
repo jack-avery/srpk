@@ -16,6 +16,11 @@ struct AES256Key {
     pub salt: [u8; 16],
 }
 
+pub struct CryptValue {
+    pub value: Vec<u8>,
+    pub cost: u8,
+}
+
 fn generate_nonce() -> [u8; 12] {
     let mut nonce: [u8; 12] = [0u8; 12];
     OsRng.fill_bytes(&mut nonce);
@@ -28,13 +33,13 @@ fn generate_salt() -> [u8; 16] {
     salt
 }
 
-fn get_aes256gcmsiv(pass: &str) -> Result<AES256Key> {
+fn get_aes256gcmsiv(pass: &str, cost: u8) -> Result<AES256Key> {
     let salt: [u8; 16] = generate_salt();
-    get_aes256gcmsiv_with_salt(pass, salt)
+    get_aes256gcmsiv_with_salt(pass, salt, cost)
 }
 
-fn get_aes256gcmsiv_with_salt(pass: &str, salt: [u8; 16]) -> Result<AES256Key> {
-    let Ok(bcrypt) = bcrypt::hash_with_salt(pass, 13u32, salt) else {
+fn get_aes256gcmsiv_with_salt(pass: &str, salt: [u8; 16], cost: u8) -> Result<AES256Key> {
+    let Ok(bcrypt) = bcrypt::hash_with_salt(pass, cost as u32, salt) else {
         return Err(BCryptHash);
     };
     let mut hasher = Sha256::new();
@@ -45,48 +50,50 @@ fn get_aes256gcmsiv_with_salt(pass: &str, salt: [u8; 16]) -> Result<AES256Key> {
 }
 
 /// Returns the original bytes.
-pub fn aes256_decrypt(bytes: &[u8], pass: &str) -> Result<Vec<u8>> {
-    let salt_u8: [u8; 16] = bytes[..16].try_into().unwrap();
-    let nonce_u8: [u8; 12] = bytes[16..28].try_into().unwrap();
-    let ciphertext_u8: &[u8] = &bytes[28..];
+pub fn aes256_decrypt(bytes: &[u8], pass: &str) -> Result<CryptValue> {
+    let cost: u8 = bytes[0];
+    let salt_u8: [u8; 16] = bytes[1..17].try_into().unwrap();
+    let nonce_u8: [u8; 12] = bytes[17..29].try_into().unwrap();
+    let ciphertext_u8: &[u8] = &bytes[29..];
     let nonce: &Nonce = &Nonce::from(nonce_u8);
-    let key: AES256Key = get_aes256gcmsiv_with_salt(pass, salt_u8)?;
+    let key: AES256Key = get_aes256gcmsiv_with_salt(pass, salt_u8, cost)?;
     match key.cipher.decrypt(nonce, ciphertext_u8.as_ref()) {
-        Ok(v) => Ok(v),
+        Ok(value) => Ok(CryptValue{ value, cost }),
         Err(_) => Err(AES256Decrypt),
     }
 }
 
 /// Turn a `Vec<u8>` into its' encrypted form using `pass`.
-pub fn aes256_encrypt(plaintext: &Vec<u8>, pass: &str) -> Result<Vec<u8>> {
+pub fn aes256_encrypt(plaintext: &Vec<u8>, pass: &str, cost: u8) -> Result<Vec<u8>> {
     let nonce_u8: [u8; 12] = generate_nonce();
     let nonce: &Nonce = &Nonce::from(nonce_u8);
-    let key: AES256Key = get_aes256gcmsiv(pass)?;
+    let key: AES256Key = get_aes256gcmsiv(pass, cost)?;
     let Ok(ciphertext) = key.cipher.encrypt(nonce, plaintext.as_ref()) else {
         return Err(AES256Encrypt);
     };
-    Ok([key.salt.to_vec(), nonce_u8.to_vec(), ciphertext].concat())
+    Ok([vec![cost], key.salt.to_vec(), nonce_u8.to_vec(), ciphertext].concat())
 }
 
 mod tests {
     use super::*;
 
     const PLAINTEXT: &str = "plaintext";
+    const COST: u8 = 8u8;
     const PASS: &str = "password";
     const BAD_PASS: &str = "bad_password";
 
     #[test]
     fn test_encrypt_decrypt() {
         let plaintext_bytes: Vec<u8> = PLAINTEXT.try_into().unwrap();
-        let encrypted_bytes: Vec<u8> = aes256_encrypt(&plaintext_bytes, PASS).unwrap();
-        let decrypted_bytes: Vec<u8> = aes256_decrypt(&encrypted_bytes, PASS).unwrap();
-        assert_eq!(decrypted_bytes, plaintext_bytes);
+        let encrypted_bytes: Vec<u8> = aes256_encrypt(&plaintext_bytes, PASS, COST).unwrap();
+        let decrypted_bytes: CryptValue = aes256_decrypt(&encrypted_bytes, PASS).unwrap();
+        assert_eq!(decrypted_bytes.value, plaintext_bytes);
     }
 
     #[test]
     fn test_decrypt_bad_pass() {
         let plaintext_bytes: Vec<u8> = PLAINTEXT.try_into().unwrap();
-        let encrypted_bytes: Vec<u8> = aes256_encrypt(&plaintext_bytes, PASS).unwrap();
+        let encrypted_bytes: Vec<u8> = aes256_encrypt(&plaintext_bytes, PASS, COST).unwrap();
         assert!(aes256_decrypt(&encrypted_bytes, BAD_PASS).is_err());
     }
 }

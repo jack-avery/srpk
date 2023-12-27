@@ -5,19 +5,19 @@ mod db;
 mod errors;
 
 use rpassword::read_password;
-use sqlite::Connection;
 use std::{
     env,
-    io::Write,
+    io::{stdin, stdout, Write},
     path::{Path, PathBuf},
     thread::sleep,
     time::Duration,
 };
 
-use crate::errors::{
+use crate::{db::Vault,
+    errors::{
     Result,
     SrpkError::{NoParam, NoVault},
-};
+}};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -35,7 +35,6 @@ fn main() {
         "init" => db_init(&param),
         "use" => db_use(&param),
         "which" => db_which(),
-        "rekey" => db_rekey(),
         "mk" => key_mk(&param),
         "rm" => key_rm(&param),
         "ls" => key_ls(),
@@ -49,8 +48,32 @@ fn main() {
 
 fn get_password(prompt: &str) -> String {
     print!("{}: ", prompt);
-    std::io::stdout().flush().unwrap();
+    stdout().flush().unwrap();
     read_password().unwrap()
+}
+
+fn get_cost() -> u8 {
+    let mut cost: String = String::new();
+    loop {
+        cost.clear();
+        print!("crypt slowness (5-31, higher = slower, 12-13 is good): ");
+        stdout().flush().unwrap();
+        stdin().read_line(&mut cost).unwrap().to_string();
+        let trim: &str = cost.trim();
+
+        match trim.parse::<u8>() {
+            Ok(u) => {
+                if !(5..=31).contains(&u) {
+                    println!("out of range");
+                    continue;
+                }
+                return u;
+            },
+            Err(_) => {
+                println!("not a valid number");
+            }
+        }
+    }
 }
 
 fn get_password_confirm(prompt: &str) -> String {
@@ -86,10 +109,6 @@ fn to_clipboard(pass: &str) -> Result<()> {
     clip::set_clipboard("")
 }
 
-fn get_vault(path: &str, pass: &str) -> Result<Connection> {
-    db::decrypt(path, pass)
-}
-
 fn all(param: &str) -> Result<()> {
     let vault: Option<PathBuf> = cfg::get_active_vault()?;
     match vault {
@@ -108,7 +127,8 @@ fn db_init(param: &Option<&String>) -> Result<()> {
         path.push_str(".db");
     }
     let pass: String = get_password_confirm("password for the new vault");
-    db::init(&path, &pass)?;
+    let cost: u8 = get_cost();
+    db::init(&path, &pass, cost)?;
     println!("successfully created new vault at {}", path);
 
     if vault_check().is_err() {
@@ -140,29 +160,17 @@ fn db_which() -> Result<()> {
     }
 }
 
-fn db_rekey() -> Result<()> {
-    let vault: String = vault_check()?;
-    let pass: String = get_password("current password");
-    let conn: Connection = get_vault(&vault, &pass)?;
-
-    let new_pass: String = get_password_confirm("new vault password");
-    db::finish(conn, &vault, &new_pass, true)?;
-    
-    println!("master password changed");
-    Ok(())
-}
-
 fn key_mk(param: &Option<&String>) -> Result<()> {
     param_check(param)?;
     let key: &str = param.unwrap();
 
-    let vault: String = vault_check()?;
+    let path: String = vault_check()?;
     let pass: String = get_password("password for active vault");
-    let conn: Connection = get_vault(&vault, &pass)?;
+    let vault: Vault = Vault::new(&path, &pass)?;
 
     let new_pass: String = get_password("new password to add");
-    db::password_new(&conn, key, &new_pass)?;
-    db::finish(conn, &vault, &pass, true)?;
+    vault.key_new(key, &new_pass)?;
+    vault.finish(true)?;
 
     println!("successfully added new key {}", key);
     Ok(())
@@ -172,24 +180,24 @@ fn key_rm(param: &Option<&String>) -> Result<()> {
     param_check(param)?;
     let key: &str = param.unwrap();
 
-    let vault: String = vault_check()?;
+    let path: String = vault_check()?;
     let pass: String = get_password("password for active vault");
-    let conn: Connection = get_vault(&vault, &pass)?;
+    let vault: Vault = Vault::new(&path, &pass)?;
 
-    db::password_del(&conn, key)?;
-    db::finish(conn, &vault, &pass, true)?;
+    vault.key_del(key)?;
+    vault.finish(true)?;
 
     println!("successfully removed key {}", key);
     Ok(())
 }
 
 fn key_get(key: &str) -> Result<()> {
-    let vault: String = vault_check()?;
+    let path: String = vault_check()?;
     let pass: String = get_password("password for active vault");
-    let conn: Connection = get_vault(&vault, &pass)?;
+    let vault: Vault = Vault::new(&path, &pass)?;
 
-    let found: Option<String> = db::password_get(&conn, key)?;
-    db::finish(conn, &vault, &pass, false)?;
+    let found: Option<String> = vault.key_get(key)?;
+    vault.finish(false)?;
 
     match found {
         Some(p) => to_clipboard(&p),
@@ -201,12 +209,12 @@ fn key_get(key: &str) -> Result<()> {
 }
 
 fn key_ls() -> Result<()> {
-    let vault: String = vault_check()?;
+    let path: String = vault_check()?;
     let pass: String = get_password("password for active vault");
-    let conn: Connection = get_vault(&vault, &pass)?;
+    let vault: Vault = Vault::new(&path, &pass)?;
 
-    let keys: Vec<String> = db::password_ls(&conn)?;
-    db::finish(conn, &vault, &pass, false)?;
+    let keys: Vec<String> = vault.key_ls()?;
+    vault.finish(false)?;
 
     if keys.is_empty() {
         println!("vault is empty");
