@@ -1,6 +1,6 @@
 [package]
 name = "srpk"
-version = "0.0.2"
+version = "0.1.0"
 authors = ["Jack Avery <jack.avery.business@gmail.com>"]
 edition = "2021"
 description = "CLI password manager"
