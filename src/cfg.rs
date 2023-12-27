@@ -6,8 +6,8 @@ use std::{
 };
 
 use crate::errors::{
-    Error::{FilePerms, PathEmpty, UTF8Decode, Unknown},
     Result,
+    SrpkError::{FilePerms, PathEmpty, UTF8Decode, Unknown},
 };
 
 fn cfg_path() -> Result<PathBuf> {

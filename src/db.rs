@@ -6,8 +6,10 @@ use std::{
 
 use crate::crypt::{aes256_decrypt, aes256_encrypt};
 use crate::errors::{
-    Error::{DBCreateTable, DBSQLConn, FilePerms, KeyDuplicate, KeyNonExist, PathEmpty, PathTaken},
     Result,
+    SrpkError::{
+        DBCreateTable, DBSQLConn, FilePerms, KeyDuplicate, KeyNonExist, PathEmpty, PathTaken,
+    },
 };
 
 const PASSWORD_NEW_SQL: &str = "INSERT INTO srpk VALUES (:key, :pass);";
@@ -78,7 +80,9 @@ pub fn decrypt(path: &str, pass: &str) -> Result<Connection> {
 
 /// Close the sqlite connection and remove. <br/>
 /// If `changed`, encrypt contents of `path.db.temp` and apply to `path.db`.
-pub fn finish(path: &str, pass: &str, changed: bool) -> Result<()> {
+pub fn finish(conn: Connection, path: &str, pass: &str, changed: bool) -> Result<()> {
+    drop(conn);
+
     let mut path_temp_str: String = path.to_owned();
     path_temp_str.push_str(".temp");
     let path_temp: &Path = Path::new(&path_temp_str);
@@ -195,8 +199,7 @@ mod tests {
         let conn: Connection = decrypt("./db_test_finish_unchanged/test.db", PASS).unwrap();
 
         password_new(&conn, KEY1, PASS).unwrap();
-        finish("./db_test_finish_unchanged/test.db", PASS, false).unwrap();
-        drop(conn);
+        finish(conn, "./db_test_finish_unchanged/test.db", PASS, false).unwrap();
         let after: Vec<u8> = std::fs::read("./db_test_finish_unchanged/test.db").unwrap();
 
         assert_eq!(before, after);
@@ -211,8 +214,7 @@ mod tests {
         let conn: Connection = decrypt("./db_test_finish_changed/test.db", PASS).unwrap();
 
         password_new(&conn, KEY1, PASS).unwrap();
-        finish("./db_test_finish_changed/test.db", PASS, true).unwrap();
-        drop(conn);
+        finish(conn, "./db_test_finish_changed/test.db", PASS, true).unwrap();
         let after: Vec<u8> = std::fs::read("./db_test_finish_changed/test.db").unwrap();
 
         assert_ne!(before, after);

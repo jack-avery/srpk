@@ -377,6 +377,7 @@ dependencies = [
  "rpassword",
  "sha2",
  "sqlite",
+ "thiserror",
 ]
 
 [[package]]

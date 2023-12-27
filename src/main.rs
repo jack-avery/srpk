@@ -12,8 +12,8 @@ use std::{
 };
 
 use crate::errors::{
-    Error::{NoParam, NoVault},
     Result,
+    SrpkError::{NoParam, NoVault},
 };
 
 fn main() {
@@ -65,12 +65,6 @@ fn vault_check() -> Result<String> {
 
 fn get_vault(path: &str, pass: &str) -> Result<Connection> {
     db::decrypt(path, pass)
-}
-
-fn finish(conn: Connection, path: &str, pass: &str, changed: bool) -> Result<()> {
-    drop(conn);
-    db::finish(path, pass, changed)?;
-    Ok(())
 }
 
 fn all(param: &str) -> Result<()> {
@@ -133,7 +127,7 @@ fn key_mk(param: &Option<&String>) -> Result<()> {
 
     let new_pass: String = get_password("new password to add");
     db::password_new(&conn, key, &new_pass)?;
-    finish(conn, &vault, &pass, true)?;
+    db::finish(conn, &vault, &pass, true)?;
 
     println!("successfully added new key {}", key);
     Ok(())
@@ -148,7 +142,7 @@ fn key_rm(param: &Option<&String>) -> Result<()> {
     let conn: Connection = get_vault(&vault, &pass)?;
 
     db::password_del(&conn, key)?;
-    finish(conn, &vault, &pass, true)?;
+    db::finish(conn, &vault, &pass, true)?;
 
     println!("successfully removed key {}", key);
     Ok(())
@@ -160,7 +154,7 @@ fn key_get(key: &str) -> Result<()> {
     let conn: Connection = get_vault(&vault, &pass)?;
 
     let found: Option<String> = db::password_get(&conn, key)?;
-    finish(conn, &vault, &pass, false)?;
+    db::finish(conn, &vault, &pass, false)?;
 
     if found.is_none() {
         println!("key {} not found", key);
@@ -177,7 +171,7 @@ fn key_ls() -> Result<()> {
     let conn: Connection = get_vault(&vault, &pass)?;
 
     let keys: Vec<String> = db::password_ls(&conn)?;
-    finish(conn, &vault, &pass, false)?;
+    db::finish(conn, &vault, &pass, false)?;
 
     if keys.is_empty() {
         println!("vault is empty");

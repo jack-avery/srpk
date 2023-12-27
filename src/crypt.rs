@@ -7,8 +7,8 @@ use aes_gcm_siv::{
 use sha2::{Digest, Sha256};
 
 use crate::errors::{
-    Error::{AES256Decrypt, AES256Encrypt, BCryptHash},
     Result,
+    SrpkError::{AES256Decrypt, AES256Encrypt, BCryptHash},
 };
 
 fn generate_nonce() -> [u8; 12] {
