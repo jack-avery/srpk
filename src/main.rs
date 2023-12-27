@@ -86,6 +86,11 @@ fn db_init(param: &Option<&String>) -> Result<()> {
     let pass: String = get_password("password for the new vault");
     db::init(&path, &pass)?;
     println!("successfully created new vault at {}", path);
+
+    if vault_check().is_err() {
+        db_use(&Some(&path))?;
+    }
+
     Ok(())
 }
 
