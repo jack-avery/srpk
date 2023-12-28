@@ -63,6 +63,10 @@ pub enum SrpkError {
     #[error("vault has no key {0}")]
     KeyNonExist(String),
 
+    /// Name is reserved
+    #[error("cannot use reserved term {0}")]
+    KeyReserved(String),
+
     /// No clue what went wrong
     #[error("unknown error")]
     Unknown,

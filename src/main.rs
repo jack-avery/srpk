@@ -16,8 +16,10 @@ use std::{
 use crate::{db::Vault,
     errors::{
     Result,
-    SrpkError::{NoParam, NoVault, Unknown},
+    SrpkError::{NoParam, NoVault, KeyReserved, Unknown},
 }};
+
+const RESERVED: [&str; 7] = ["help", "init", "use", "which", "mk", "rm", "ls"];
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -175,6 +177,10 @@ fn db_which() -> Result<()> {
 fn key_mk(param: &Option<&String>) -> Result<()> {
     param_check(param)?;
     let key: &str = param.unwrap();
+
+    if RESERVED.contains(&key) {
+        return Err(KeyReserved(key.to_string()));
+    }
 
     let path: String = vault_check()?;
     let pass: String = get_password("password for active vault");
