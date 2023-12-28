@@ -1,6 +1,6 @@
 mod cfg;
 mod crypt;
-mod db;
+mod vault;
 mod errors;
 
 use arboard::Clipboard;
@@ -13,7 +13,7 @@ use std::{
     time::Duration,
 };
 
-use crate::{db::Vault,
+use crate::{vault::Vault,
     errors::{
     Result,
     SrpkError::{NoParam, NoVault, KeyReserved, Unknown},
@@ -34,9 +34,9 @@ fn main() {
             help();
             Ok(())
         }
-        "init" => db_init(&param),
-        "use" => db_use(&param),
-        "which" => db_which(),
+        "init" => vault_init(&param),
+        "use" => vault_use(&param),
+        "which" => vault_which(),
         "mk" => key_mk(&param),
         "rm" => key_rm(&param),
         "ls" => key_ls(),
@@ -134,7 +134,7 @@ fn all(param: &str) -> Result<()> {
     }
 }
 
-fn db_init(param: &Option<&String>) -> Result<()> {
+fn vault_init(param: &Option<&String>) -> Result<()> {
     param_check(param)?;
     let mut path: String = param.unwrap().to_owned();
     if !path.ends_with(".db") {
@@ -146,13 +146,13 @@ fn db_init(param: &Option<&String>) -> Result<()> {
     println!("successfully created new vault at {}", path);
 
     if vault_check().is_err() {
-        db_use(&Some(&path))?;
+        vault_use(&Some(&path))?;
     }
 
     Ok(())
 }
 
-fn db_use(param: &Option<&String>) -> Result<()> {
+fn vault_use(param: &Option<&String>) -> Result<()> {
     param_check(param)?;
     let vault: &Path = Path::new(param.unwrap());
     cfg::set_active_vault(vault)?;
@@ -160,7 +160,7 @@ fn db_use(param: &Option<&String>) -> Result<()> {
     Ok(())
 }
 
-fn db_which() -> Result<()> {
+fn vault_which() -> Result<()> {
     let vault: Option<PathBuf> = cfg::get_active_vault()?;
     match vault {
         Some(p) => {

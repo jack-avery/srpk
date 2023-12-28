@@ -21,12 +21,12 @@ const PASSWORD_LS_SQL: &str = "SELECT key FROM srpk;";
 /// 
 /// Create a vault:
 /// ```
-/// Vault::create("./mydb.db", "mypassword", 12u8)?;
+/// Vault::create("./myvault.db", "mypassword", 12u8)?;
 /// ```
 /// 
 /// Open an existing vault and interact with it:
 /// ```
-/// let vault: Vault = Vault::open("./mydb.db", "mypassword")?;
+/// let vault: Vault = Vault::open("./myvault.db", "mypassword")?;
 /// vault.key_new("github", "password123!")?;
 /// assert_eq!(vault.key_get("github")?, "password123!");
 /// assert_eq!(vault.key_ls()?, vec!["github"]);
@@ -50,7 +50,7 @@ impl Vault {
     /// 
     /// Example:
     /// ```
-    /// Vault::create("./mydb.db", "mypassword", 12u8)?;
+    /// Vault::create("./myvault.db", "mypassword", 12u8)?;
     /// ```
     pub fn create(path: &str, pass: &str, cost: u8) -> Result<()> {
         // verify clean slate
@@ -77,8 +77,8 @@ impl Vault {
     /// 
     /// Example:
     /// ```
-    /// Vault::create("./mydb.db", "mypassword", "8")?;
-    /// let vault: Vault = Vault::open("./mydb.db", "mypassword")?;
+    /// Vault::create("./myvault.db", "mypassword", "8")?;
+    /// let vault: Vault = Vault::open("./myvault.db", "mypassword")?;
     /// vault.close(false)?;
     /// ```
     pub fn open(path: &str, pass: &str) -> Result<Self> {
@@ -106,8 +106,8 @@ impl Vault {
     /// 
     /// Example:
     /// ```
-    /// Vault::create("./mydb.db", "mypassword", "8")?;
-    /// let vault: Vault = Vault::open("./mydb.db", "mypassword")?;
+    /// Vault::create("./myvault.db", "mypassword", "8")?;
+    /// let vault: Vault = Vault::open("./myvault.db", "mypassword")?;
     /// vault.key_new("github", "password123!")?;
     /// vault.close(true)?;
     /// ```
@@ -130,8 +130,8 @@ impl Vault {
     /// 
     /// Example:
     /// ```
-    /// Vault::create("./mydb.db", "mypassword", "8")?;
-    /// let vault: Vault = Vault::open("./mydb.db", "mypassword")?;
+    /// Vault::create("./myvault.db", "mypassword", "8")?;
+    /// let vault: Vault = Vault::open("./myvault.db", "mypassword")?;
     /// vault.key_new("github", "password123!")?;
     /// vault.close(true)?;
     /// ```
@@ -153,8 +153,8 @@ impl Vault {
     /// 
     /// Example:
     /// ```
-    /// Vault::create("./mydb.db", "mypassword", "8")?;
-    /// let vault: Vault = Vault::open("./mydb.db", "mypassword")?;
+    /// Vault::create("./myvault.db", "mypassword", "8")?;
+    /// let vault: Vault = Vault::open("./myvault.db", "mypassword")?;
     /// vault.key_new("github", "password123!")?;
     /// assert_eq!(vault.key_get("github")?, "password123!");
     /// vault.close(true)?;
@@ -174,8 +174,8 @@ impl Vault {
     /// 
     /// Example:
     /// ```
-    /// Vault::create("./mydb.db", "mypassword", "8")?;
-    /// let vault: Vault = Vault::open("./mydb.db", "mypassword")?;
+    /// Vault::create("./myvault.db", "mypassword", "8")?;
+    /// let vault: Vault = Vault::open("./myvault.db", "mypassword")?;
     /// vault.key_new("github", "password123!")?;
     /// vault.key_del("github")?;
     /// vault.close(true)?;
@@ -197,8 +197,8 @@ impl Vault {
     /// 
     /// Example:
     /// ```
-    /// Vault::create("./mydb.db", "mypassword", "8")?;
-    /// let vault: Vault = Vault::open("./mydb.db", "mypassword")?;
+    /// Vault::create("./myvault.db", "mypassword", "8")?;
+    /// let vault: Vault = Vault::open("./myvault.db", "mypassword")?;
     /// vault.key_new("github", "password123!")?;
     /// assert_eq!(vault.key_ls()?, vec!["github"]);
     /// vault.close(true)?;
@@ -223,17 +223,17 @@ mod tests {
 
     #[test]
     fn test_create() {
-        std::fs::create_dir("db_test_decrypt").unwrap();
-        Vault::create("./db_test_decrypt/test.db", PASS, COST).unwrap();
-        Vault::open("./db_test_decrypt/test.db", PASS).unwrap();
-        std::fs::remove_dir_all("db_test_decrypt").unwrap();
+        std::fs::create_dir("vault_test_decrypt").unwrap();
+        Vault::create("./vault_test_decrypt/test.db", PASS, COST).unwrap();
+        Vault::open("./vault_test_decrypt/test.db", PASS).unwrap();
+        std::fs::remove_dir_all("vault_test_decrypt").unwrap();
     }
 
     #[test]
     fn test_password() {
-        std::fs::create_dir("db_test_password_new").unwrap();
-        Vault::create("./db_test_password_new/test.db", PASS, COST).unwrap();
-        let vault: Vault = Vault::open("./db_test_password_new/test.db", PASS).unwrap();
+        std::fs::create_dir("vault_test_password_new").unwrap();
+        Vault::create("./vault_test_password_new/test.db", PASS, COST).unwrap();
+        let vault: Vault = Vault::open("./vault_test_password_new/test.db", PASS).unwrap();
 
         vault.key_new(KEY1, PASS).unwrap();
         let read: Option<String> = vault.key_get(KEY1).unwrap();
@@ -241,82 +241,82 @@ mod tests {
 
         assert!(read.is_some());
         assert_eq!(read.unwrap(), PASS);
-        std::fs::remove_dir_all("db_test_password_new").unwrap();
+        std::fs::remove_dir_all("vault_test_password_new").unwrap();
     }
 
     #[test]
     fn test_finish_unchanged() {
-        std::fs::create_dir("db_test_finish_unchanged").unwrap();
-        Vault::create("./db_test_finish_unchanged/test.db", PASS, COST).unwrap();
-        let before: Vec<u8> = std::fs::read("./db_test_finish_unchanged/test.db").unwrap();
-        let vault: Vault = Vault::open("./db_test_finish_unchanged/test.db", PASS).unwrap();
+        std::fs::create_dir("vault_test_finish_unchanged").unwrap();
+        Vault::create("./vault_test_finish_unchanged/test.db", PASS, COST).unwrap();
+        let before: Vec<u8> = std::fs::read("./vault_test_finish_unchanged/test.db").unwrap();
+        let vault: Vault = Vault::open("./vault_test_finish_unchanged/test.db", PASS).unwrap();
 
         vault.key_new(KEY1, PASS).unwrap();
         vault.close(false).unwrap();
 
-        let after: Vec<u8> = std::fs::read("./db_test_finish_unchanged/test.db").unwrap();
+        let after: Vec<u8> = std::fs::read("./vault_test_finish_unchanged/test.db").unwrap();
         assert_eq!(before, after);
-        std::fs::remove_dir_all("db_test_finish_unchanged").unwrap();
+        std::fs::remove_dir_all("vault_test_finish_unchanged").unwrap();
     }
 
     #[test]
     fn test_finish_changed() {
-        std::fs::create_dir("db_test_finish_changed").unwrap();
-        Vault::create("./db_test_finish_changed/test.db", PASS, COST).unwrap();
-        let before: Vec<u8> = std::fs::read("./db_test_finish_changed/test.db").unwrap();
-        let vault: Vault = Vault::open("./db_test_finish_changed/test.db", PASS).unwrap();
+        std::fs::create_dir("vault_test_finish_changed").unwrap();
+        Vault::create("./vault_test_finish_changed/test.db", PASS, COST).unwrap();
+        let before: Vec<u8> = std::fs::read("./vault_test_finish_changed/test.db").unwrap();
+        let vault: Vault = Vault::open("./vault_test_finish_changed/test.db", PASS).unwrap();
 
         vault.key_new(KEY1, PASS).unwrap();
         vault.close(true).unwrap();
 
-        let after: Vec<u8> = std::fs::read("./db_test_finish_changed/test.db").unwrap();
+        let after: Vec<u8> = std::fs::read("./vault_test_finish_changed/test.db").unwrap();
         assert_ne!(before, after);
-        std::fs::remove_dir_all("db_test_finish_changed").unwrap();
+        std::fs::remove_dir_all("vault_test_finish_changed").unwrap();
     }
 
     #[test]
     fn test_password_new_duplicate() {
-        std::fs::create_dir("db_test_password_new_duplicate").unwrap();
-        Vault::create("./db_test_password_new_duplicate/test.db", PASS, COST).unwrap();
-        let vault: Vault = Vault::open("./db_test_password_new_duplicate/test.db", PASS).unwrap();
+        std::fs::create_dir("vault_test_password_new_duplicate").unwrap();
+        Vault::create("./vault_test_password_new_duplicate/test.db", PASS, COST).unwrap();
+        let vault: Vault = Vault::open("./vault_test_password_new_duplicate/test.db", PASS).unwrap();
 
         vault.key_new(KEY1, PASS).unwrap();
         assert!(vault.key_new(KEY1, PASS).is_err());
         vault.close(false).unwrap();
 
-        std::fs::remove_dir_all("db_test_password_new_duplicate").unwrap();
+        std::fs::remove_dir_all("vault_test_password_new_duplicate").unwrap();
     }
 
     #[test]
     fn test_password_del() {
-        std::fs::create_dir("db_test_password_del").unwrap();
-        Vault::create("./db_test_password_del/test.db", PASS, COST).unwrap();
-        let vault: Vault = Vault::open("./db_test_password_del/test.db", PASS).unwrap();
+        std::fs::create_dir("vault_test_password_del").unwrap();
+        Vault::create("./vault_test_password_del/test.db", PASS, COST).unwrap();
+        let vault: Vault = Vault::open("./vault_test_password_del/test.db", PASS).unwrap();
 
         vault.key_new(KEY1, PASS).unwrap();
         vault.key_del(KEY1).unwrap();
         vault.close(false).unwrap();
 
-        std::fs::remove_dir_all("db_test_password_del").unwrap();
+        std::fs::remove_dir_all("vault_test_password_del").unwrap();
     }
 
     #[test]
     fn test_password_del_missing() {
-        std::fs::create_dir("db_test_password_del_missing").unwrap();
-        Vault::create("./db_test_password_del_missing/test.db", PASS, COST).unwrap();
-        let vault: Vault = Vault::open("./db_test_password_del_missing/test.db", PASS).unwrap();
+        std::fs::create_dir("vault_test_password_del_missing").unwrap();
+        Vault::create("./vault_test_password_del_missing/test.db", PASS, COST).unwrap();
+        let vault: Vault = Vault::open("./vault_test_password_del_missing/test.db", PASS).unwrap();
 
         assert!(vault.key_del(KEY1).is_err());
         vault.close(false).unwrap();
 
-        std::fs::remove_dir_all("db_test_password_del_missing").unwrap();
+        std::fs::remove_dir_all("vault_test_password_del_missing").unwrap();
     }
 
     #[test]
     fn text_password_ls() {
-        std::fs::create_dir("db_test_password_ls").unwrap();
-        Vault::create("./db_test_password_ls/test.db", PASS, COST).unwrap();
-        let vault: Vault = Vault::open("./db_test_password_ls/test.db", PASS).unwrap();
+        std::fs::create_dir("vault_test_password_ls").unwrap();
+        Vault::create("./vault_test_password_ls/test.db", PASS, COST).unwrap();
+        let vault: Vault = Vault::open("./vault_test_password_ls/test.db", PASS).unwrap();
 
         vault.key_new(KEY1, PASS).unwrap();
         let ls = vault.key_ls().unwrap();
@@ -326,6 +326,6 @@ mod tests {
         assert_eq!(ls.len(), 2);
         vault.close(false).unwrap();
 
-        std::fs::remove_dir_all("db_test_password_ls").unwrap();
+        std::fs::remove_dir_all("vault_test_password_ls").unwrap();
     }
 }
