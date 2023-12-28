@@ -4,12 +4,10 @@ use aes_gcm_siv::{
     aead::{Aead, KeyInit, OsRng},
     Aes256GcmSiv, Nonce,
 };
+use bcrypt::HashParts;
 use sha2::{Digest, Sha256};
 
-use crate::errors::{
-    Result,
-    SrpkError::{AES256Decrypt, AES256Encrypt, BCryptHash},
-};
+use crate::errors::Result;
 
 struct AES256Key {
     pub cipher: Aes256GcmSiv,
@@ -39,9 +37,7 @@ fn get_aes256gcmsiv(pass: &str, cost: u8) -> Result<AES256Key> {
 }
 
 fn get_aes256gcmsiv_with_salt(pass: &str, salt: [u8; 16], cost: u8) -> Result<AES256Key> {
-    let Ok(bcrypt) = bcrypt::hash_with_salt(pass, cost as u32, salt) else {
-        return Err(BCryptHash);
-    };
+    let bcrypt: HashParts = bcrypt::hash_with_salt(pass, cost as u32, salt)?;
     let mut hasher = Sha256::new();
     hasher.update(bcrypt.to_string());
     let hash: GenericArray<u8, U32> = hasher.finalize();
@@ -57,10 +53,8 @@ pub fn aes256_decrypt(bytes: &[u8], pass: &str) -> Result<CryptValue> {
     let ciphertext_u8: &[u8] = &bytes[29..];
     let nonce: &Nonce = &Nonce::from(nonce_u8);
     let key: AES256Key = get_aes256gcmsiv_with_salt(pass, salt_u8, cost)?;
-    match key.cipher.decrypt(nonce, ciphertext_u8.as_ref()) {
-        Ok(value) => Ok(CryptValue{ value, cost }),
-        Err(_) => Err(AES256Decrypt),
-    }
+    let value = key.cipher.decrypt(nonce, ciphertext_u8.as_ref())?;
+    Ok(CryptValue{ value, cost })
 }
 
 /// Turn a `Vec<u8>` into its' encrypted form using `pass`.
@@ -68,9 +62,7 @@ pub fn aes256_encrypt(plaintext: &Vec<u8>, pass: &str, cost: u8) -> Result<Vec<u
     let nonce_u8: [u8; 12] = generate_nonce();
     let nonce: &Nonce = &Nonce::from(nonce_u8);
     let key: AES256Key = get_aes256gcmsiv(pass, cost)?;
-    let Ok(ciphertext) = key.cipher.encrypt(nonce, plaintext.as_ref()) else {
-        return Err(AES256Encrypt);
-    };
+    let ciphertext: Vec<u8> = key.cipher.encrypt(nonce, plaintext.as_ref())?;
     Ok([vec![cost], key.salt.to_vec(), nonce_u8.to_vec(), ciphertext].concat())
 }
 

@@ -7,30 +7,23 @@ pub type Result<T> = core::result::Result<T, SrpkError>;
 #[derive(Error, Debug)]
 #[non_exhaustive]
 pub enum SrpkError {
-    // db
-    /// Failed to create database
-    #[error("failed to initialize database")]
-    DBCreate,
-
     /// Failed to connect SQLite
-    #[error("failed to connect sqlite")]
-    DBSQLConn,
+    #[error("sqlite error: {0}")]
+    SQLiteError(#[from] sqlite::Error),
 
-    // crypt
     /// BCrypt hash failed
-    #[error("failed to create bcrypt hash")]
-    BCryptHash,
+    #[error("bcrypt error: {0}")]
+    BCryptHash(#[from] bcrypt::BcryptError),
 
-    /// AES256 encrypt failed
-    #[error("encrypt failed")]
-    AES256Encrypt,
+    /// AES256
+    #[error("encrypt/decrypt failed (bad password?)")]
+    AES256(#[from] aes_gcm_siv::Error),
 
-    /// AES256 decrypt failed
-    #[error("decrypt failed (bad password?)")]
-    AES256Decrypt,
+    /// IOError
+    #[error("io error: {0}")]
+    IOError(#[from] std::io::Error),
 
-    // file i/o
-    /// File path is used
+    /// File path is taken
     #[error("path is occupied: {0}")]
     PathTaken(PathBuf),
 
@@ -38,13 +31,9 @@ pub enum SrpkError {
     #[error("file not found: {0}")]
     PathEmpty(PathBuf),
 
-    /// Missing permissions
-    #[error("missing permissions to modify file {0}")]
-    FilePerms(PathBuf),
-
     /// UTF8Decode failed
-    #[error("failed to decode utf-8")]
-    UTF8Decode,
+    #[error("utf8 decode failed: {0}")]
+    UTF8Decode(#[from] std::string::FromUtf8Error),
 
     // general
     /// Missing parameter
@@ -52,7 +41,7 @@ pub enum SrpkError {
     NoParam,
 
     /// No active vault
-    #[error("no active vault")]
+    #[error("no active vault (try srpk init?)")]
     NoVault,
 
     /// Duplicate key

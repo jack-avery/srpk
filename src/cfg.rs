@@ -7,7 +7,7 @@ use std::{
 
 use crate::errors::{
     Result,
-    SrpkError::{FilePerms, PathEmpty, UTF8Decode, Unknown},
+    SrpkError::{PathEmpty, Unknown},
 };
 
 fn cfg_path() -> Result<PathBuf> {
@@ -25,18 +25,12 @@ pub fn get_active_vault() -> Result<Option<PathBuf>> {
     if !path.exists() {
         return Ok(None);
     }
-    let Ok(file_bytes) = read(&path) else {
-        return Err(FilePerms(path));
-    };
-    match String::from_utf8(file_bytes) {
-        Ok(p) => {
-            let active: PathBuf = PathBuf::from(p);
-            match active.exists() {
-                true => Ok(Some(active)),
-                false => Err(PathEmpty(active)),
-            }
-        }
-        Err(_) => Err(UTF8Decode),
+    let file_bytes: Vec<u8> = read(&path)?;
+    let file: String = String::from_utf8(file_bytes)?;
+    let active: PathBuf = PathBuf::from(file);
+    match active.exists() {
+        true => Ok(Some(active)),
+        false => Err(PathEmpty(active)),
     }
 }
 
@@ -46,9 +40,7 @@ pub fn set_active_vault(vault: &Path) -> Result<()> {
     // ensure it's a real file from root to prevent it from getting lost
     let mut new_vault: PathBuf = PathBuf::new();
     if !vault.has_root() {
-        let Ok(cwd) = current_dir() else {
-            return Err(Unknown);
-        };
+        let cwd: PathBuf = current_dir()?;
         new_vault.push(cwd)
     }
     new_vault.push(vault);
@@ -57,8 +49,6 @@ pub fn set_active_vault(vault: &Path) -> Result<()> {
     }
 
     let new_vault_str: &str = new_vault.to_str().unwrap();
-    if write(&path, new_vault_str).is_err() {
-        return Err(FilePerms(path));
-    };
+    write(&path, new_vault_str)?;
     Ok(())
 }
