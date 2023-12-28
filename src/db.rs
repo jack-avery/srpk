@@ -17,6 +17,24 @@ const PASSWORD_GET_SQL: &str = "SELECT value FROM srpk WHERE key = ?;";
 const PASSWORD_DEL_SQL: &str = "DELETE FROM srpk WHERE key = ?";
 const PASSWORD_LS_SQL: &str = "SELECT key FROM srpk;";
 
+/// Represents an opened srpk vault.
+/// 
+/// Create a vault:
+/// ```
+/// Vault::create("./mydb.db", "mypassword", 12u8)?;
+/// ```
+/// 
+/// Open an existing vault and interact with it:
+/// ```
+/// let vault: Vault = Vault::open("./mydb.db", "mypassword")?;
+/// vault.key_new("github", "password123!")?;
+/// assert_eq!(vault.key_get("github"), "password123");
+/// assert_eq!(vault.key_ls(), vec!["github"]);
+/// vault.key_del("github")?;
+/// vault.close(false);
+/// // or close, while applying any changes:
+/// vault.close(true);
+/// ```
 pub struct Vault {
     conn: Connection,
     pass: String,
@@ -32,7 +50,7 @@ impl Vault {
     /// 
     /// Example:
     /// ```
-    /// Vault::create("./mydb.db", "mypassword", "8")?;
+    /// Vault::create("./mydb.db", "mypassword", 12u8)?;
     /// ```
     pub fn create(path: &str, pass: &str, cost: u8) -> Result<()> {
         // verify clean slate
