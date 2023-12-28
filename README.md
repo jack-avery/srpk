@@ -55,8 +55,7 @@ $ srpk my_password
 - [x] key rm
 - [x] key ls
 - [x] use clipboard
-
-- [ ] improve error handling and message verbosity
+- [x] improve error handling and message verbosity
 - [ ] improve enc and make this actually usable
 
 ## Bug reports & feature suggestions 🐛

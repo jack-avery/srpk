@@ -142,7 +142,7 @@ fn db_init(param: &Option<&String>) -> Result<()> {
     }
     let pass: String = get_password_confirm("password for the new vault");
     let cost: u8 = get_cost();
-    db::init(&path, &pass, cost)?;
+    Vault::create(&path, &pass, cost)?;
     println!("successfully created new vault at {}", path);
 
     if vault_check().is_err() {
@@ -184,11 +184,11 @@ fn key_mk(param: &Option<&String>) -> Result<()> {
 
     let path: String = vault_check()?;
     let pass: String = get_password("password for active vault");
-    let vault: Vault = Vault::new(&path, &pass)?;
+    let vault: Vault = Vault::open(&path, &pass)?;
 
     let new_pass: String = get_password("new password to add");
     vault.key_new(key, &new_pass)?;
-    vault.finish(true)?;
+    vault.close(true)?;
 
     println!("successfully added new key {}", key);
     Ok(())
@@ -200,10 +200,10 @@ fn key_rm(param: &Option<&String>) -> Result<()> {
 
     let path: String = vault_check()?;
     let pass: String = get_password("password for active vault");
-    let vault: Vault = Vault::new(&path, &pass)?;
+    let vault: Vault = Vault::open(&path, &pass)?;
 
     vault.key_del(key)?;
-    vault.finish(true)?;
+    vault.close(true)?;
 
     println!("successfully removed key {}", key);
     Ok(())
@@ -212,10 +212,10 @@ fn key_rm(param: &Option<&String>) -> Result<()> {
 fn key_get(key: &str) -> Result<()> {
     let path: String = vault_check()?;
     let pass: String = get_password("password for active vault");
-    let vault: Vault = Vault::new(&path, &pass)?;
+    let vault: Vault = Vault::open(&path, &pass)?;
 
     let found: Option<String> = vault.key_get(key)?;
-    vault.finish(false)?;
+    vault.close(false)?;
 
     match found {
         Some(p) => to_clipboard(&p),
@@ -229,10 +229,10 @@ fn key_get(key: &str) -> Result<()> {
 fn key_ls() -> Result<()> {
     let path: String = vault_check()?;
     let pass: String = get_password("password for active vault");
-    let vault: Vault = Vault::new(&path, &pass)?;
+    let vault: Vault = Vault::open(&path, &pass)?;
 
     let keys: Vec<String> = vault.key_ls()?;
-    vault.finish(false)?;
+    vault.close(false)?;
 
     if keys.is_empty() {
         println!("vault is empty");

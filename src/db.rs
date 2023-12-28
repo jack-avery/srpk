@@ -26,8 +26,44 @@ pub struct Vault {
 }
 
 impl Vault {
+    /// Create a vault at `path` with password `pass` and encrypt it.
+    /// 
+    /// `cost` is the bcrypt hashing cost.
+    /// 
+    /// Example:
+    /// ```
+    /// Vault::create("./mydb.db", "mypassword", "8")?;
+    /// ```
+    pub fn create(path: &str, pass: &str, cost: u8) -> Result<()> {
+        // verify clean slate
+        let path: PathBuf = PathBuf::from(path);
+
+        // create the initial DB
+        let connection = sqlite::open(&path)?;
+        connection.execute("CREATE TABLE srpk (key TEXT, value TEXT);")?;
+        drop(connection);
+        // file perms should be solid by this point: we can unwrap everything else from here
+
+        // encrypt & overwrite
+        let db_raw: Vec<u8> = read(&path).unwrap();
+        let db_enc: Vec<u8> = aes256_encrypt(&db_raw, pass, cost)?;
+        write(&path, db_enc).unwrap();
+
+        Ok(())
+    }
+
     /// Open a vault at `path` using `pass`.
-    pub fn new(path: &str, pass: &str) -> Result<Self> {
+    /// 
+    /// Creates a temporary database for interfacing with at `path_temp`,
+    /// which will be removed when `Vault.finish()` is called.
+    /// 
+    /// Example:
+    /// ```
+    /// Vault::create("./mydb.db", "mypassword", "8")?;
+    /// let vault: Vault = Vault::open("./mydb.db", "mypassword")?;
+    /// vault.close(false)?;
+    /// ```
+    pub fn open(path: &str, pass: &str) -> Result<Self> {
         let mut path_str: String = path.to_owned();
         let path: PathBuf = PathBuf::from(&path_str);
         path_str.push_str(".temp");
@@ -45,7 +81,19 @@ impl Vault {
     }
 
     /// Close the vault, applying changes if `changed`.
-    pub fn finish(self, changed: bool) -> Result<()> {
+    /// 
+    /// Deletes the temporary database.
+    /// If `changed` is `true`, the contents of temporary DB will be encrypted,
+    /// and the encrypted data will replace the original DB.
+    /// 
+    /// Example:
+    /// ```
+    /// Vault::create("./mydb.db", "mypassword", "8")?;
+    /// let vault: Vault = Vault::open("./mydb.db", "mypassword")?;
+    /// vault.key_new("github", "password123!")?;
+    /// vault.close(true)?;
+    /// ```
+    pub fn close(self, changed: bool) -> Result<()> {
         if changed {
             let path: &Path = Path::new(&self.path);
             let db_raw: Vec<u8> = read(&self.path_temp)?;
@@ -59,6 +107,16 @@ impl Vault {
     }
 
     /// Create new password `key` of content `pass` in the vault.
+    /// 
+    /// Returns `Err(KeyDuplicate)` if `key` already exists in this vault.
+    /// 
+    /// Example:
+    /// ```
+    /// Vault::create("./mydb.db", "mypassword", "8")?;
+    /// let vault: Vault = Vault::open("./mydb.db", "mypassword")?;
+    /// vault.key_new("github", "password123!")?;
+    /// vault.close(true)?;
+    /// ```
     pub fn key_new(&self, key: &str, pass: &str) -> Result<()> {
         if self.key_get(key)?.is_some() {
             return Err(KeyDuplicate(key.to_owned()));
@@ -70,7 +128,19 @@ impl Vault {
         Ok(())
     }
 
-    /// Get password `key` from the vault. `None` if given key is missing.
+    /// Get password `key` from the vault.
+    /// 
+    /// Returns `None` if the search succeeded and there was no key.
+    /// Returns `Err` if the search was unsuccessful due to an error.
+    /// 
+    /// Example:
+    /// ```
+    /// Vault::create("./mydb.db", "mypassword", "8")?;
+    /// let vault: Vault = Vault::open("./mydb.db", "mypassword")?;
+    /// vault.key_new("github", "password123!")?;
+    /// assert_eq!(vault.key_get("github"), "password123!");
+    /// vault.close(true)?;
+    /// ```
     pub fn key_get(&self, key: &str) -> Result<Option<String>> {
         let mut statement = self.conn.prepare(PASSWORD_GET_SQL)?;
         statement.bind((1, key))?;
@@ -81,6 +151,17 @@ impl Vault {
     }
 
     /// Delete password `key` from the vault.
+    /// 
+    /// Returns `Err(KeyNonExist)` if the key does not exist in this vault.
+    /// 
+    /// Example:
+    /// ```
+    /// Vault::create("./mydb.db", "mypassword", "8")?;
+    /// let vault: Vault = Vault::open("./mydb.db", "mypassword")?;
+    /// vault.key_new("github", "password123!")?;
+    /// vault.key_del("github")?;
+    /// vault.close(true)?;
+    /// ```
     pub fn key_del(&self, key: &str) -> Result<()> {
         if self.key_get(key)?.is_none() {
             return Err(KeyNonExist(key.to_owned()));
@@ -93,6 +174,17 @@ impl Vault {
     }
 
     /// Get a `Vec<String>` containing the names of each key in the vault.
+    /// 
+    /// Returns an empty `Vec<String>` if no keys are in the vault.
+    /// 
+    /// Example:
+    /// ```
+    /// Vault::create("./mydb.db", "mypassword", "8")?;
+    /// let vault: Vault = Vault::open("./mydb.db", "mypassword")?;
+    /// vault.key_new("github", "password123!")?;
+    /// assert_eq!(vault.key_ls(), vec!["github"]);
+    /// vault.close(true)?;
+    /// ```
     pub fn key_ls(&self) -> Result<Vec<String>> {
         let mut statement = self.conn.prepare(PASSWORD_LS_SQL)?;
         let mut keys: Vec<String> = Vec::new();
@@ -102,26 +194,6 @@ impl Vault {
         Ok(keys)
     }
 }
-
-/// Initialize a vault and encrypt it
-pub fn init(path: &str, pass: &str, cost: u8) -> Result<()> {
-    // verify clean slate
-    let path: PathBuf = PathBuf::from(path);
-
-    // create the initial DB
-    let connection = sqlite::open(&path)?;
-    connection.execute("CREATE TABLE srpk (key TEXT, value TEXT);")?;
-    drop(connection);
-    // file perms should be solid by this point: we can unwrap everything else from here
-
-    // encrypt & overwrite
-    let db_raw: Vec<u8> = read(&path).unwrap();
-    let db_enc: Vec<u8> = aes256_encrypt(&db_raw, pass, cost)?;
-    write(&path, db_enc).unwrap();
-
-    Ok(())
-}
-
 
 mod tests {
     use super::*;
@@ -134,20 +206,20 @@ mod tests {
     #[test]
     fn test_create() {
         std::fs::create_dir("db_test_decrypt").unwrap();
-        init("./db_test_decrypt/test.db", PASS, COST).unwrap();
-        Vault::new("./db_test_decrypt/test.db", PASS).unwrap();
+        Vault::create("./db_test_decrypt/test.db", PASS, COST).unwrap();
+        Vault::open("./db_test_decrypt/test.db", PASS).unwrap();
         std::fs::remove_dir_all("db_test_decrypt").unwrap();
     }
 
     #[test]
     fn test_password() {
         std::fs::create_dir("db_test_password_new").unwrap();
-        init("./db_test_password_new/test.db", PASS, COST).unwrap();
-        let vault: Vault = Vault::new("./db_test_password_new/test.db", PASS).unwrap();
+        Vault::create("./db_test_password_new/test.db", PASS, COST).unwrap();
+        let vault: Vault = Vault::open("./db_test_password_new/test.db", PASS).unwrap();
 
         vault.key_new(KEY1, PASS).unwrap();
         let read: Option<String> = vault.key_get(KEY1).unwrap();
-        vault.finish(false).unwrap();
+        vault.close(false).unwrap();
 
         assert!(read.is_some());
         assert_eq!(read.unwrap(), PASS);
@@ -157,12 +229,12 @@ mod tests {
     #[test]
     fn test_finish_unchanged() {
         std::fs::create_dir("db_test_finish_unchanged").unwrap();
-        init("./db_test_finish_unchanged/test.db", PASS, COST).unwrap();
+        Vault::create("./db_test_finish_unchanged/test.db", PASS, COST).unwrap();
         let before: Vec<u8> = std::fs::read("./db_test_finish_unchanged/test.db").unwrap();
-        let vault: Vault = Vault::new("./db_test_finish_unchanged/test.db", PASS).unwrap();
+        let vault: Vault = Vault::open("./db_test_finish_unchanged/test.db", PASS).unwrap();
 
         vault.key_new(KEY1, PASS).unwrap();
-        vault.finish(false).unwrap();
+        vault.close(false).unwrap();
 
         let after: Vec<u8> = std::fs::read("./db_test_finish_unchanged/test.db").unwrap();
         assert_eq!(before, after);
@@ -172,12 +244,12 @@ mod tests {
     #[test]
     fn test_finish_changed() {
         std::fs::create_dir("db_test_finish_changed").unwrap();
-        init("./db_test_finish_changed/test.db", PASS, COST).unwrap();
+        Vault::create("./db_test_finish_changed/test.db", PASS, COST).unwrap();
         let before: Vec<u8> = std::fs::read("./db_test_finish_changed/test.db").unwrap();
-        let vault: Vault = Vault::new("./db_test_finish_changed/test.db", PASS).unwrap();
+        let vault: Vault = Vault::open("./db_test_finish_changed/test.db", PASS).unwrap();
 
         vault.key_new(KEY1, PASS).unwrap();
-        vault.finish(true).unwrap();
+        vault.close(true).unwrap();
 
         let after: Vec<u8> = std::fs::read("./db_test_finish_changed/test.db").unwrap();
         assert_ne!(before, after);
@@ -187,12 +259,12 @@ mod tests {
     #[test]
     fn test_password_new_duplicate() {
         std::fs::create_dir("db_test_password_new_duplicate").unwrap();
-        init("./db_test_password_new_duplicate/test.db", PASS, COST).unwrap();
-        let vault: Vault = Vault::new("./db_test_password_new_duplicate/test.db", PASS).unwrap();
+        Vault::create("./db_test_password_new_duplicate/test.db", PASS, COST).unwrap();
+        let vault: Vault = Vault::open("./db_test_password_new_duplicate/test.db", PASS).unwrap();
 
         vault.key_new(KEY1, PASS).unwrap();
         assert!(vault.key_new(KEY1, PASS).is_err());
-        vault.finish(false).unwrap();
+        vault.close(false).unwrap();
 
         std::fs::remove_dir_all("db_test_password_new_duplicate").unwrap();
     }
@@ -200,12 +272,12 @@ mod tests {
     #[test]
     fn test_password_del() {
         std::fs::create_dir("db_test_password_del").unwrap();
-        init("./db_test_password_del/test.db", PASS, COST).unwrap();
-        let vault: Vault = Vault::new("./db_test_password_del/test.db", PASS).unwrap();
+        Vault::create("./db_test_password_del/test.db", PASS, COST).unwrap();
+        let vault: Vault = Vault::open("./db_test_password_del/test.db", PASS).unwrap();
 
         vault.key_new(KEY1, PASS).unwrap();
         vault.key_del(KEY1).unwrap();
-        vault.finish(false).unwrap();
+        vault.close(false).unwrap();
 
         std::fs::remove_dir_all("db_test_password_del").unwrap();
     }
@@ -213,11 +285,11 @@ mod tests {
     #[test]
     fn test_password_del_missing() {
         std::fs::create_dir("db_test_password_del_missing").unwrap();
-        init("./db_test_password_del_missing/test.db", PASS, COST).unwrap();
-        let vault: Vault = Vault::new("./db_test_password_del_missing/test.db", PASS).unwrap();
+        Vault::create("./db_test_password_del_missing/test.db", PASS, COST).unwrap();
+        let vault: Vault = Vault::open("./db_test_password_del_missing/test.db", PASS).unwrap();
 
         assert!(vault.key_del(KEY1).is_err());
-        vault.finish(false).unwrap();
+        vault.close(false).unwrap();
 
         std::fs::remove_dir_all("db_test_password_del_missing").unwrap();
     }
@@ -225,8 +297,8 @@ mod tests {
     #[test]
     fn text_password_ls() {
         std::fs::create_dir("db_test_password_ls").unwrap();
-        init("./db_test_password_ls/test.db", PASS, COST).unwrap();
-        let vault: Vault = Vault::new("./db_test_password_ls/test.db", PASS).unwrap();
+        Vault::create("./db_test_password_ls/test.db", PASS, COST).unwrap();
+        let vault: Vault = Vault::open("./db_test_password_ls/test.db", PASS).unwrap();
 
         vault.key_new(KEY1, PASS).unwrap();
         let ls = vault.key_ls().unwrap();
@@ -234,7 +306,7 @@ mod tests {
         vault.key_new(KEY2, PASS).unwrap();
         let ls = vault.key_ls().unwrap();
         assert_eq!(ls.len(), 2);
-        vault.finish(false).unwrap();
+        vault.close(false).unwrap();
 
         std::fs::remove_dir_all("db_test_password_ls").unwrap();
     }
