@@ -28,12 +28,12 @@ const PASSWORD_LS_SQL: &str = "SELECT key FROM srpk;";
 /// ```
 /// let vault: Vault = Vault::open("./mydb.db", "mypassword")?;
 /// vault.key_new("github", "password123!")?;
-/// assert_eq!(vault.key_get("github"), "password123");
-/// assert_eq!(vault.key_ls(), vec!["github"]);
+/// assert_eq!(vault.key_get("github")?, "password123!");
+/// assert_eq!(vault.key_ls()?, vec!["github"]);
 /// vault.key_del("github")?;
-/// vault.close(false);
+/// vault.close(false)?;
 /// // or close, while applying any changes:
-/// vault.close(true);
+/// vault.close(true)?;
 /// ```
 pub struct Vault {
     conn: Connection,
@@ -156,7 +156,7 @@ impl Vault {
     /// Vault::create("./mydb.db", "mypassword", "8")?;
     /// let vault: Vault = Vault::open("./mydb.db", "mypassword")?;
     /// vault.key_new("github", "password123!")?;
-    /// assert_eq!(vault.key_get("github"), "password123!");
+    /// assert_eq!(vault.key_get("github")?, "password123!");
     /// vault.close(true)?;
     /// ```
     pub fn key_get(&self, key: &str) -> Result<Option<String>> {
@@ -200,7 +200,7 @@ impl Vault {
     /// Vault::create("./mydb.db", "mypassword", "8")?;
     /// let vault: Vault = Vault::open("./mydb.db", "mypassword")?;
     /// vault.key_new("github", "password123!")?;
-    /// assert_eq!(vault.key_ls(), vec!["github"]);
+    /// assert_eq!(vault.key_ls()?, vec!["github"]);
     /// vault.close(true)?;
     /// ```
     pub fn key_ls(&self) -> Result<Vec<String>> {
