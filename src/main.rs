@@ -116,7 +116,9 @@ fn to_clipboard(pass: &str) -> Result<()> {
     println!("pass has been put into clipboard, and will be cleared in 10s");
     let wait_duration: Duration = Duration::from_secs(10);
     sleep(wait_duration);
-    set_clipboard("")
+    set_clipboard("")?;
+    println!("clipboard cleared");
+    Ok(())
 }
 
 fn all(param: &str) -> Result<()> {
