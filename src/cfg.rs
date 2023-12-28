@@ -25,15 +25,15 @@ pub fn get_active_vault() -> Result<Option<PathBuf>> {
     if !path.exists() {
         return Ok(None);
     }
-    let Ok(file_bytes) = read(path) else {
-        return Err(FilePerms);
+    let Ok(file_bytes) = read(&path) else {
+        return Err(FilePerms(path));
     };
     match String::from_utf8(file_bytes) {
         Ok(p) => {
             let active: PathBuf = PathBuf::from(p);
             match active.exists() {
                 true => Ok(Some(active)),
-                false => Err(PathEmpty),
+                false => Err(PathEmpty(active)),
             }
         }
         Err(_) => Err(UTF8Decode),
@@ -53,12 +53,12 @@ pub fn set_active_vault(vault: &Path) -> Result<()> {
     }
     new_vault.push(vault);
     if !new_vault.exists() {
-        return Err(PathEmpty);
+        return Err(PathEmpty(path));
     }
 
     let new_vault_str: &str = new_vault.to_str().unwrap();
-    if write(path, new_vault_str).is_err() {
-        return Err(FilePerms);
+    if write(&path, new_vault_str).is_err() {
+        return Err(FilePerms(path));
     };
     Ok(())
 }

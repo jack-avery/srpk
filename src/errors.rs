@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use thiserror::Error;
 
 pub type Result<T> = core::result::Result<T, SrpkError>;
@@ -7,68 +9,61 @@ pub type Result<T> = core::result::Result<T, SrpkError>;
 pub enum SrpkError {
     // db
     /// Failed to create database
-    DBCreateTable,
+    #[error("failed to initialize database")]
+    DBCreate,
 
     /// Failed to connect SQLite
+    #[error("failed to connect sqlite")]
     DBSQLConn,
 
     // crypt
     /// BCrypt hash failed
+    #[error("failed to create bcrypt hash")]
     BCryptHash,
 
     /// AES256 encrypt failed
+    #[error("encrypt failed")]
     AES256Encrypt,
 
     /// AES256 decrypt failed
+    #[error("decrypt failed (bad password?)")]
     AES256Decrypt,
 
     // file i/o
     /// File path is used
-    PathTaken,
+    #[error("path is occupied: {0}")]
+    PathTaken(PathBuf),
 
     /// File path is empty
-    PathEmpty,
+    #[error("file not found: {0}")]
+    PathEmpty(PathBuf),
 
     /// Missing permissions
-    FilePerms,
+    #[error("missing permissions to modify file {0}")]
+    FilePerms(PathBuf),
 
     /// UTF8Decode failed
+    #[error("failed to decode utf-8")]
     UTF8Decode,
 
     // general
     /// Missing parameter
+    #[error("missing parameter")]
     NoParam,
 
     /// No active vault
+    #[error("no active vault")]
     NoVault,
 
     /// Duplicate key
-    KeyDuplicate,
+    #[error("vault already has key {0}")]
+    KeyDuplicate(String),
 
     /// Key does not exist
-    KeyNonExist,
+    #[error("vault has no key {0}")]
+    KeyNonExist(String),
 
     /// No clue what went wrong
+    #[error("unknown error")]
     Unknown,
-}
-
-impl core::fmt::Display for SrpkError {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        match self {
-            SrpkError::DBCreateTable => write!(f, "failed to initialize database"),
-            SrpkError::DBSQLConn => write!(f, "failed to connect sqlite"),
-            SrpkError::BCryptHash => write!(f, "password hashing failed"),
-            SrpkError::AES256Encrypt => write!(f, "encrypt failed"),
-            SrpkError::AES256Decrypt => write!(f, "decrypt failed (bad password?)"),
-            SrpkError::PathTaken => write!(f, "path is occupied"),
-            SrpkError::PathEmpty => write!(f, "file not found"),
-            SrpkError::FilePerms => write!(f, "missing permissions"),
-            SrpkError::UTF8Decode => write!(f, "failed to decode utf-8"),
-            SrpkError::NoParam => write!(f, "missing parameter"),
-            SrpkError::NoVault => write!(f, "no active vault (try `srpk init`?)"),
-            SrpkError::KeyDuplicate => write!(f, "key with that name exists"),
-            SrpkError::KeyNonExist => write!(f, "no key with that name exists"),
-            SrpkError::Unknown => write!(f, "unknown error"),
-        }
-    }
 }
