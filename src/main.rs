@@ -1,7 +1,7 @@
 mod cfg;
 mod crypt;
-mod vault;
 mod errors;
+mod vault;
 
 use arboard::Clipboard;
 use rpassword::read_password;
@@ -13,11 +13,13 @@ use std::{
     time::Duration,
 };
 
-use crate::{vault::Vault,
+use crate::{
     errors::{
-    Result,
-    SrpkError::{NoParam, NoVault, KeyReserved, Unknown},
-}};
+        Result,
+        SrpkError::{KeyReserved, NoParam, NoVault, Unknown},
+    },
+    vault::Vault,
+};
 
 const RESERVED: [&str; 7] = ["help", "init", "use", "which", "mk", "rm", "ls"];
 
@@ -64,7 +66,7 @@ fn get_cost() -> u8 {
                     continue;
                 }
                 return u;
-            },
+            }
             Err(_) => {
                 println!("not a valid number");
             }
@@ -91,10 +93,10 @@ fn get_password_confirm(prompt: &str) -> String {
 
 pub fn set_clipboard(text: &str) -> Result<()> {
     let Ok(mut clipboard) = Clipboard::new() else {
-        return Err(Unknown)
+        return Err(Unknown);
     };
     if clipboard.set_text(text).is_err() {
-        return Err(Unknown)
+        return Err(Unknown);
     }
     Ok(())
 }

@@ -42,7 +42,7 @@ fn get_aes256gcmsiv_with_salt(pass: &str, salt: [u8; 16], cost: u8) -> Result<AE
     hasher.update(bcrypt.to_string());
     let hash: GenericArray<u8, U32> = hasher.finalize();
     let cipher: Aes256GcmSiv = Aes256GcmSiv::new(&hash);
-    Ok(AES256Key{ cipher, salt })
+    Ok(AES256Key { cipher, salt })
 }
 
 /// Returns the original bytes.
@@ -54,7 +54,7 @@ pub fn aes256_decrypt(bytes: &[u8], pass: &str) -> Result<CryptValue> {
     let nonce: &Nonce = &Nonce::from(nonce_u8);
     let key: AES256Key = get_aes256gcmsiv_with_salt(pass, salt_u8, cost)?;
     let value = key.cipher.decrypt(nonce, ciphertext_u8.as_ref())?;
-    Ok(CryptValue{ value, cost })
+    Ok(CryptValue { value, cost })
 }
 
 /// Turn a `Vec<u8>` into its' encrypted form using `pass`.

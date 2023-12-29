@@ -4,12 +4,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::crypt::{CryptValue, aes256_decrypt, aes256_encrypt};
+use crate::crypt::{aes256_decrypt, aes256_encrypt, CryptValue};
 use crate::errors::{
     Result,
-    SrpkError::{
-        KeyDuplicate, KeyNonExist,
-    },
+    SrpkError::{KeyDuplicate, KeyNonExist},
 };
 
 const PASSWORD_NEW_SQL: &str = "INSERT INTO srpk VALUES (:key, :pass);";
@@ -18,12 +16,12 @@ const PASSWORD_DEL_SQL: &str = "DELETE FROM srpk WHERE key = ?";
 const PASSWORD_LS_SQL: &str = "SELECT key FROM srpk;";
 
 /// Represents an opened srpk vault.
-/// 
+///
 /// Create a vault:
 /// ```
 /// Vault::create("./myvault.db", "mypassword", 12u8)?;
 /// ```
-/// 
+///
 /// Open an existing vault and interact with it:
 /// ```
 /// let vault: Vault = Vault::open("./myvault.db", "mypassword")?;
@@ -45,9 +43,9 @@ pub struct Vault {
 
 impl Vault {
     /// Create a vault at `path` with password `pass` and encrypt it.
-    /// 
+    ///
     /// `cost` is the bcrypt hashing cost.
-    /// 
+    ///
     /// Example:
     /// ```
     /// Vault::create("./myvault.db", "mypassword", 12u8)?;
@@ -71,10 +69,10 @@ impl Vault {
     }
 
     /// Open a vault at `path` using `pass`.
-    /// 
+    ///
     /// Creates a temporary database for interfacing with at `path_temp`,
     /// which will be removed when `Vault.finish()` is called.
-    /// 
+    ///
     /// Example:
     /// ```
     /// Vault::create("./myvault.db", "mypassword", "8")?;
@@ -95,15 +93,21 @@ impl Vault {
         write(&path_temp, db_raw.value)?;
         let conn = sqlite::open(&path_temp)?;
 
-        Ok(Self{ conn, pass: pass.to_owned(), path, path_temp, cost: db_raw.cost })
+        Ok(Self {
+            conn,
+            pass: pass.to_owned(),
+            path,
+            path_temp,
+            cost: db_raw.cost,
+        })
     }
 
     /// Close the vault, applying changes if `changed`.
-    /// 
+    ///
     /// Deletes the temporary database.
     /// If `changed` is `true`, the contents of temporary DB will be encrypted,
     /// and the encrypted data will replace the original DB.
-    /// 
+    ///
     /// Example:
     /// ```
     /// Vault::create("./myvault.db", "mypassword", "8")?;
@@ -125,9 +129,9 @@ impl Vault {
     }
 
     /// Create new password `key` of content `pass` in the vault.
-    /// 
+    ///
     /// Returns `Err(KeyDuplicate)` if `key` already exists in this vault.
-    /// 
+    ///
     /// Example:
     /// ```
     /// Vault::create("./myvault.db", "mypassword", "8")?;
@@ -147,10 +151,10 @@ impl Vault {
     }
 
     /// Get password `key` from the vault.
-    /// 
+    ///
     /// Returns `None` if the search succeeded and there was no key.
     /// Returns `Err` if the search was unsuccessful due to an error.
-    /// 
+    ///
     /// Example:
     /// ```
     /// Vault::create("./myvault.db", "mypassword", "8")?;
@@ -169,9 +173,9 @@ impl Vault {
     }
 
     /// Delete password `key` from the vault.
-    /// 
+    ///
     /// Returns `Err(KeyNonExist)` if the key does not exist in this vault.
-    /// 
+    ///
     /// Example:
     /// ```
     /// Vault::create("./myvault.db", "mypassword", "8")?;
@@ -192,9 +196,9 @@ impl Vault {
     }
 
     /// Get a `Vec<String>` containing the names of each key in the vault.
-    /// 
+    ///
     /// Returns an empty `Vec<String>` if no keys are in the vault.
-    /// 
+    ///
     /// Example:
     /// ```
     /// Vault::create("./myvault.db", "mypassword", "8")?;
@@ -278,7 +282,8 @@ mod tests {
     fn test_password_new_duplicate() {
         std::fs::create_dir("vault_test_password_new_duplicate").unwrap();
         Vault::create("./vault_test_password_new_duplicate/test.db", PASS, COST).unwrap();
-        let vault: Vault = Vault::open("./vault_test_password_new_duplicate/test.db", PASS).unwrap();
+        let vault: Vault =
+            Vault::open("./vault_test_password_new_duplicate/test.db", PASS).unwrap();
 
         vault.key_new(KEY1, PASS).unwrap();
         assert!(vault.key_new(KEY1, PASS).is_err());
