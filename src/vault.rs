@@ -58,12 +58,11 @@ impl Vault {
         let connection = sqlite::open(&path)?;
         connection.execute("CREATE TABLE srpk (key TEXT, value TEXT);")?;
         drop(connection);
-        // file perms should be solid by this point: we can unwrap everything else from here
 
         // encrypt & overwrite
-        let db_raw: Vec<u8> = read(&path).unwrap();
+        let db_raw: Vec<u8> = read(&path)?;
         let db_enc: Vec<u8> = aes256_encrypt(&db_raw, pass, cost)?;
-        write(&path, db_enc).unwrap();
+        write(&path, db_enc)?;
 
         Ok(())
     }
@@ -71,7 +70,7 @@ impl Vault {
     /// Open a vault at `path` using `pass`.
     ///
     /// Creates a temporary database for interfacing with at `path_temp`,
-    /// which will be removed when `Vault.finish()` is called.
+    /// which will be removed when `Vault.close()` is called.
     ///
     /// Example:
     /// ```
@@ -120,11 +119,11 @@ impl Vault {
             let path: &Path = Path::new(&self.path);
             let db_raw: Vec<u8> = read(&self.path_temp)?;
             let db_enc: Vec<u8> = aes256_encrypt(&db_raw, &self.pass, self.cost)?;
-            write(path, db_enc).unwrap();
+            write(path, db_enc)?;
         }
 
         drop(self.conn);
-        remove_file(&self.path_temp).unwrap();
+        remove_file(&self.path_temp)?;
         Ok(())
     }
 
@@ -167,7 +166,7 @@ impl Vault {
         let mut statement = self.conn.prepare(PASSWORD_GET_SQL)?;
         statement.bind((1, key))?;
         if let Ok(State::Row) = statement.next() {
-            return Ok(Some(statement.read::<String, _>("value").unwrap()));
+            return Ok(Some(statement.read::<String, _>("value")?));
         }
         Ok(None)
     }
@@ -211,7 +210,7 @@ impl Vault {
         let mut statement = self.conn.prepare(PASSWORD_LS_SQL)?;
         let mut keys: Vec<String> = Vec::new();
         while let Ok(State::Row) = statement.next() {
-            keys.push(statement.read::<String, _>("key").unwrap());
+            keys.push(statement.read::<String, _>("key")?);
         }
         Ok(keys)
     }

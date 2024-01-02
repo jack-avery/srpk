@@ -23,6 +23,10 @@ pub enum SrpkError {
     #[error("io error: {0}")]
     IOError(#[from] std::io::Error),
 
+    /// Clipboard Error
+    #[error("arboard error: {0}")]
+    ArboardError(#[from] arboard::Error),
+
     /// File path is taken
     #[error("path is occupied: {0}")]
     PathTaken(PathBuf),
@@ -56,7 +60,7 @@ pub enum SrpkError {
     #[error("cannot use reserved term {0}")]
     KeyReserved(String),
 
-    /// No clue what went wrong
-    #[error("unknown error")]
-    Unknown,
+    /// Failed to find either user config_dir or user home_dir
+    #[error("cannot find config directory or home directory to store active vault")]
+    ConfigDir,
 }

@@ -1,4 +1,3 @@
-use dirs::config_dir;
 use std::{
     env::current_dir,
     fs::{read, write},
@@ -7,17 +6,17 @@ use std::{
 
 use crate::errors::{
     Result,
-    SrpkError::{PathEmpty, Unknown},
+    SrpkError::{ConfigDir, PathEmpty},
 };
 
 fn cfg_path() -> Result<PathBuf> {
-    match config_dir() {
-        Some(mut buf) => {
-            buf.push(".srpkvault");
-            Ok(buf)
-        }
-        None => Err(Unknown),
+    if let Some(config_home) = dirs::config_dir() {
+        return Ok(config_home);
     }
+    if let Some(user_home) = dirs::home_dir() {
+        return Ok(user_home);
+    }
+    Err(ConfigDir)
 }
 
 pub fn get_active_vault() -> Result<Option<PathBuf>> {
@@ -48,7 +47,8 @@ pub fn set_active_vault(vault: &Path) -> Result<()> {
         return Err(PathEmpty(path));
     }
 
-    let new_vault_str: &str = new_vault.to_str().unwrap();
-    write(&path, new_vault_str)?;
+    if let Some(new_vault_str) = new_vault.to_str() {
+        write(&path, new_vault_str)?;
+    }
     Ok(())
 }

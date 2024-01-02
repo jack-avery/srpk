@@ -16,7 +16,7 @@ use std::{
 use crate::{
     errors::{
         Result,
-        SrpkError::{KeyReserved, NoParam, NoVault, Unknown},
+        SrpkError::{KeyReserved, NoParam, NoVault},
     },
     vault::Vault,
 };
@@ -50,13 +50,13 @@ fn main() {
     }
 }
 
-fn get_cost() -> u8 {
+fn get_cost() -> Result<u8> {
     let mut cost: String = String::new();
     loop {
         cost.clear();
         print!("crypt slowness (5-31, higher = slower, 12-13 is good): ");
-        stdout().flush().unwrap();
-        stdin().read_line(&mut cost).unwrap().to_string();
+        stdout().flush()?;
+        stdin().read_line(&mut cost)?.to_string();
         let trim: &str = cost.trim();
 
         match trim.parse::<u8>() {
@@ -65,7 +65,7 @@ fn get_cost() -> u8 {
                     println!("out of range");
                     continue;
                 }
-                return u;
+                return Ok(u);
             }
             Err(_) => {
                 println!("not a valid number");
@@ -74,31 +74,26 @@ fn get_cost() -> u8 {
     }
 }
 
-fn get_password(prompt: &str) -> String {
+fn get_password(prompt: &str) -> Result<String> {
     print!("{}: ", prompt);
-    stdout().flush().unwrap();
-    read_password().unwrap()
+    stdout().flush()?;
+    Ok(read_password()?)
 }
 
-fn get_password_confirm(prompt: &str) -> String {
+fn get_password_confirm(prompt: &str) -> Result<String> {
     loop {
-        let pass = get_password(prompt);
-        let pass_confirm = get_password("retype password");
+        let pass: String = get_password(prompt)?;
+        let pass_confirm: String = get_password("retype password")?;
         if pass == pass_confirm {
-            return pass;
+            return Ok(pass);
         }
         println!("passwords do not match")
     }
 }
 
 pub fn set_clipboard(text: &str) -> Result<()> {
-    let Ok(mut clipboard) = Clipboard::new() else {
-        return Err(Unknown);
-    };
-    if clipboard.set_text(text).is_err() {
-        return Err(Unknown);
-    }
-    Ok(())
+    let mut clipboard = Clipboard::new()?;
+    Ok(clipboard.set_text(text)?)
 }
 
 fn param_check(param: &Option<&String>) -> Result<()> {
@@ -142,8 +137,8 @@ fn vault_init(param: &Option<&String>) -> Result<()> {
     if !path.ends_with(".db") {
         path.push_str(".db");
     }
-    let pass: String = get_password_confirm("password for the new vault");
-    let cost: u8 = get_cost();
+    let pass: String = get_password_confirm("password for the new vault")?;
+    let cost: u8 = get_cost()?;
     Vault::create(&path, &pass, cost)?;
     println!("successfully created new vault at {}", path);
 
@@ -185,10 +180,10 @@ fn key_mk(param: &Option<&String>) -> Result<()> {
     }
 
     let path: String = vault_check()?;
-    let pass: String = get_password("password for active vault");
+    let pass: String = get_password("password for active vault")?;
     let vault: Vault = Vault::open(&path, &pass)?;
 
-    let new_pass: String = get_password("new password to add");
+    let new_pass: String = get_password("new password to add")?;
     vault.key_new(key, &new_pass)?;
     vault.close(true)?;
 
@@ -201,7 +196,7 @@ fn key_rm(param: &Option<&String>) -> Result<()> {
     let key: &str = param.unwrap();
 
     let path: String = vault_check()?;
-    let pass: String = get_password("password for active vault");
+    let pass: String = get_password("password for active vault")?;
     let vault: Vault = Vault::open(&path, &pass)?;
 
     vault.key_del(key)?;
@@ -213,7 +208,7 @@ fn key_rm(param: &Option<&String>) -> Result<()> {
 
 fn key_get(key: &str) -> Result<()> {
     let path: String = vault_check()?;
-    let pass: String = get_password("password for active vault");
+    let pass: String = get_password("password for active vault")?;
     let vault: Vault = Vault::open(&path, &pass)?;
 
     let found: Option<String> = vault.key_get(key)?;
@@ -230,7 +225,7 @@ fn key_get(key: &str) -> Result<()> {
 
 fn key_ls() -> Result<()> {
     let path: String = vault_check()?;
-    let pass: String = get_password("password for active vault");
+    let pass: String = get_password("password for active vault")?;
     let vault: Vault = Vault::open(&path, &pass)?;
 
     let keys: Vec<String> = vault.key_ls()?;
