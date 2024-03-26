@@ -46,7 +46,7 @@ pub fn set_active_vault(vault: &Path) -> Result<()> {
     }
     new_vault.push(vault);
     if !new_vault.exists() {
-        return Err(PathEmpty(path));
+        return Err(PathEmpty(new_vault));
     }
 
     if let Some(new_vault_str) = new_vault.to_str() {
