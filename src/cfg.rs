@@ -10,10 +10,12 @@ use crate::errors::{
 };
 
 fn cfg_path() -> Result<PathBuf> {
-    if let Some(config_home) = dirs::config_dir() {
+    if let Some(mut config_home) = dirs::config_dir() {
+        config_home.push(".srpkvault");
         return Ok(config_home);
     }
-    if let Some(user_home) = dirs::home_dir() {
+    if let Some(mut user_home) = dirs::home_dir() {
+        user_home.push(".srpkvault");
         return Ok(user_home);
     }
     Err(ConfigDir)
