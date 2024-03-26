@@ -216,6 +216,7 @@ impl Vault {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
 

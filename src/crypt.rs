@@ -66,6 +66,7 @@ pub fn aes256_encrypt(plaintext: &Vec<u8>, pass: &str, cost: u8) -> Result<Vec<u
     Ok([vec![cost], key.salt.to_vec(), nonce_u8.to_vec(), ciphertext].concat())
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
 
