@@ -50,7 +50,7 @@ pub fn set_active_vault(vault: &Path) -> Result<()> {
     }
 
     if let Some(new_vault_str) = new_vault.to_str() {
-        write(&path, new_vault_str)?;
+        write(path, new_vault_str)?;
     }
     Ok(())
 }
