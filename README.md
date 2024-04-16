@@ -5,14 +5,11 @@ srpk is a locally-stored CLI **password management** tool that uses your clipboa
 
 ## ⚠️ Notice
 
-**This is a learning project for Rust, and is not intended to be used ever!**<br/>
-That said, code reviews are welcomed, and a list of issues I'm aware of is below:
-
-- Encryption algorithm is not configurable* (uses AES256)
-- Database engine is not configurable (uses SQLite3)
-- No padding is used in encrypted values
-
-> \* you can change bcrypt cost
+**This was a learning project for Rust, and might not be entirely secure!**
+That said, to my knowledge, this should be OK:
+- Uses AES256
+- Password goes through a bcrypt hash, cost is configurable
+But, if an issue is spotted, please indicate with an [issue](https://github.com/jack-avery/srpk/issues).
 
 ## ✍️ Usage
 
@@ -56,9 +53,8 @@ $ srpk my_password
 - [x] key ls
 - [x] use clipboard
 - [x] improve error handling and message verbosity
-- [ ] improve enc and make this actually usable
 
 ## Bug reports & feature suggestions 🐛
 Has something gone **horribly** wrong? *Or do you just think something's missing?*
 
-Feel free to [create a new issue](https://github.com/jack-avery/srpk/issues), join the [Discord](https://discord.gg/qpyT4zx), or message me directly on Discord about it: `@raspy`.
+Feel free to [create a new issue](https://github.com/jack-avery/srpk/issues) or join the [Discord](https://discord.gg/qpyT4zx).
