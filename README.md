@@ -5,7 +5,7 @@ srpk is a locally-stored CLI **password management** tool that uses your clipboa
 
 ## ⚠️ Notice
 
-**This was a learning project for Rust, and might not be entirely secure!**
+**This was a learning project for Rust, and might not be entirely secure!**<br/>
 That said, to my knowledge, this should be OK:
 - Uses AES256
 - Password goes through a bcrypt hash, cost is configurable
