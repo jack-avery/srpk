@@ -9,6 +9,7 @@ srpk is a locally-stored CLI **password management** tool that uses your clipboa
 That said, to my knowledge, this should be OK:
 - Uses AES256
 - Password goes through a bcrypt hash, cost is configurable
+
 But, if an issue is spotted, please indicate with an [issue](https://github.com/jack-avery/srpk/issues).
 
 ## ✍️ Usage
